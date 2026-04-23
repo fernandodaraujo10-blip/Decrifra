@@ -522,7 +522,7 @@ const BottomNav: React.FC<{ activeTab: AppTab; onChange: (tab: AppTab) => void }
     { id: 'settings', label: 'CONFIG.', icon: '⚙️' },
   ];
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 z-[1000] border-t bg-[#ECE7DF] border-[#D9D1C6] flex justify-around items-center rounded-t-[1.2rem] max-w-[430px] w-full" style={{ height: '86px', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 z-[1000] border-t bg-[#ECE7DF] border-[#D9D1C6] flex justify-around items-center rounded-t-[1.2rem] max-w-[430px] w-full" style={{ height: `${BOTTOM_NAV_HEIGHT}px`, paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {items.map((item) => (
         <button key={item.id} onClick={() => onChange(item.id)} className={`nav-tab ${activeTab === item.id ? 'active' : ''}`}>
           <div className="tab-icon-wrapper">{item.icon}</div>
@@ -877,10 +877,10 @@ const App: React.FC = () => {
   };
 
   const renderMusic = () => (
-    <div className="space-y-6 pb-4">
+    <div className={musicResult ? "space-y-6 pb-4" : "h-full flex flex-col gap-3"}>
       <HeaderBlock title="Músicas" subtitle="Interprete letras, emoções e significados" accentA="🎵" accentB="🎧" vibeA="💿" vibeB="🎼" />
       {!musicResult && (
-        <section className="rounded-[2rem] bg-[#F2EEE8] border border-[#DED7CB] shadow-[0_16px_40px_rgba(0,0,0,0.14)] p-4 md:p-6 space-y-5">
+        <section className="rounded-[2rem] bg-[#F2EEE8] border border-[#DED7CB] shadow-[0_16px_40px_rgba(0,0,0,0.14)] p-4 space-y-4">
           <SegmentedToggle value={musicSearchType} onChange={(v) => setMusicSearchType(v as MusicSearchType)} options={[{ id: 'track', label: 'MÚSICA' }, { id: 'artist', label: 'ARTISTA' }]} />
           <SearchInput
             value={query}
@@ -926,19 +926,19 @@ const App: React.FC = () => {
           </div>
         </section>
       )}
-      <CardsSection title="Destaques de hoje" onSelect={() => { }} cards={[
+      {musicResult && <CardsSection title="Destaques de hoje" onSelect={() => { }} cards={[
         { id: 'mensagem', title: 'MENSAGEM DA LETRA', subtitle: 'Essência e significado', emoji: '✍️' },
         { id: 'sentimento', title: 'SENTIMENTO CENTRAL', subtitle: 'Emoção dominante', emoji: '💛' },
         { id: 'contexto', title: 'CONTEXTO DA CANÇÃO', subtitle: 'Tempo, cenário e referências', emoji: '🎸' },
-      ]} />
+      ]} />}
     </div>
   );
 
   const renderMovies = () => (
-    <div className="space-y-6 pb-4">
+    <div className={moviesResult ? "space-y-6 pb-4" : "h-full flex flex-col gap-3"}>
       <MoviesHeroBanner onOpenSettings={() => setActiveTab('settings')} />
       {!moviesResult && (
-        <section className="rounded-[2rem] bg-[#F6F3EE] border border-[#DED7CB] shadow-[0_14px_34px_rgba(0,0,0,0.1)] px-4 py-5 space-y-5">
+        <section className="rounded-[2rem] bg-[#F6F3EE] border border-[#DED7CB] shadow-[0_14px_34px_rgba(0,0,0,0.1)] px-4 py-4 space-y-3">
           <SegmentedToggle value={moviesSearchType} onChange={(v) => setMoviesSearchType(v as MoviesSearchType)} options={[{ id: 'movie', label: 'FILME' }, { id: 'series', label: 'SÉRIE' }]} />
           <SearchInput
             value={moviesQuery}
@@ -987,7 +987,7 @@ const App: React.FC = () => {
           </div>
         </section>
       )}
-      {!moviesResult && (
+      {moviesResult && (
         <SuggestionsSection
           onViewAll={() => setToast('Mostrando todas as sugestões de hoje.')}
           onSelect={(id) => {
@@ -1013,10 +1013,10 @@ const App: React.FC = () => {
   );
 
   const renderBooks = () => (
-    <div className="space-y-6 pb-4">
+    <div className={booksResult ? "space-y-6 pb-4" : "h-full flex flex-col gap-3"}>
       <HeaderBlock title="Livros" subtitle="Descubra temas, símbolos e camadas da leitura" accentA="📚" accentB="🔎" vibeA="🕯️" vibeB="📖" />
       {!booksResult && (
-        <section className="rounded-[2rem] bg-[#F2EEE8] border border-[#DED7CB] shadow-[0_16px_40px_rgba(0,0,0,0.14)] p-4 md:p-6 space-y-5">
+        <section className="rounded-[2rem] bg-[#F2EEE8] border border-[#DED7CB] shadow-[0_16px_40px_rgba(0,0,0,0.14)] p-4 space-y-4">
           <SegmentedToggle value={booksSearchType} onChange={(v) => setBooksSearchType(v as BooksSearchType)} options={[{ id: 'book', label: 'LIVRO' }, { id: 'author', label: 'AUTOR' }]} />
           <SearchInput
             value={booksQuery}
@@ -1149,8 +1149,8 @@ const App: React.FC = () => {
                 }}
                 className="h-full rounded-[1rem] bg-[#F7F4EF] border border-[#E3DCD1] shadow-[0_8px_18px_rgba(0,0,0,0.08)] p-2 flex flex-col items-center justify-center gap-1.5"
               >
-                <span className="w-8 h-8 rounded-full bg-[#EFE9E0] flex items-center justify-center text-base text-[#8A6A3A]">{icon}</span>
-                <span className="text-[0.62rem] leading-tight text-center serif text-[#34271D]">{title}</span>
+                <span className="w-9 h-9 rounded-full bg-[#EFE9E0] flex items-center justify-center text-base text-[#8A6A3A]">{icon}</span>
+                <span className="text-[0.68rem] leading-tight text-center serif text-[#34271D]">{title}</span>
               </button>
             ))}
           </div>
@@ -1168,7 +1168,7 @@ const App: React.FC = () => {
               >
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/35 to-black/80" />
                 <div className="absolute left-2 right-2 bottom-1.5">
-                  <p className="text-white text-[0.56rem] leading-tight serif font-semibold">{card.title}</p>
+                  <p className="text-white text-[0.6rem] leading-tight serif font-semibold">{card.title}</p>
                 </div>
               </button>
             ))}
@@ -1188,11 +1188,19 @@ const App: React.FC = () => {
   );
 
   const isHomeScreen = activeTab === 'home';
+  const shouldLockScroll =
+    isHomeScreen ||
+    (activeTab === 'movies_series' && !moviesResult) ||
+    (activeTab === 'books' && !booksResult) ||
+    (activeTab === 'music' && !musicResult);
 
   return (
     <div className={`min-h-screen ${themeMode === 'dark' ? 'bg-[#1d1915] text-[#F3EBDD]' : 'bg-[#EDE7DF] text-[#2B231C]'} p-0 flex items-start justify-center`}>
-      <div className={`relative overflow-x-hidden bg-[#EDE7DF] w-full max-w-[430px] h-[100dvh] mobile-shell ${isHomeScreen ? 'overflow-y-hidden' : 'overflow-y-auto'}`}>
-        <main className={`w-full px-4 pt-4 ${isHomeScreen ? 'h-[calc(100dvh-86px)] pb-4 overflow-hidden' : 'pb-28'}`}>
+      <div className={`relative overflow-x-hidden bg-[#EDE7DF] w-full max-w-[430px] h-[100dvh] mobile-shell ${shouldLockScroll ? 'overflow-y-hidden' : 'overflow-y-auto'}`}>
+        <main
+          className={`w-full px-4 pt-4 ${shouldLockScroll ? 'overflow-hidden' : ''}`}
+          style={shouldLockScroll ? { height: `calc(100dvh - ${BOTTOM_NAV_HEIGHT}px)`, paddingBottom: '8px' } : { paddingBottom: `${BOTTOM_NAV_HEIGHT + 12}px` }}
+        >
           {activeTab === 'home' && renderHome()}
           {activeTab === 'music' && renderMusic()}
           {activeTab === 'store' && renderStore()}
