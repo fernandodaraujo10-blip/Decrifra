@@ -7,7 +7,7 @@ const puppeteer = require('puppeteer');
   page.on('console', msg => console.log('BROWSER_LOG:', msg.text()));
   page.on('pageerror', error => console.log('BROWSER_ERROR:', error.message));
 
-  await page.goto('http://localhost:3001/');
+  await page.goto('http://localhost:3002/');
   await new Promise(resolve => setTimeout(resolve, 3000));
   
   try {
@@ -30,8 +30,18 @@ const puppeteer = require('puppeteer');
       if (interpretar) interpretar.click();
     });
     
-    // Wait for analysis to finish and component to mount
-    await new Promise(resolve => setTimeout(resolve, 10000));
+    // Check for details element periodically
+    let detailsText = null;
+    for (let i = 0; i < 40; i++) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      detailsText = await page.evaluate(() => {
+        const d = document.querySelector('details');
+        return d ? d.innerText : null;
+      });
+      if (detailsText) break;
+    }
+    
+    console.log("ERROR BOUNDARY DETAILS:", detailsText || "No Error Boundary Appeared");
     
   } catch (e) {
     console.log('Script error:', e.message);

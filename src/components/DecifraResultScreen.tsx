@@ -40,7 +40,7 @@ const makeSnippet = (text?: string, fallback = 'Conteúdo indisponível no momen
   return normalized.length > 230 ? `${normalized.slice(0, 227)}...` : normalized;
 };
 
-const DecifraResultScreen: React.FC<MusicResultScreenProps> = ({ result, title, onNewSearch, bannerImage, artistImage }) => {
+const DecifraResultScreen: React.FC<MusicResultScreenProps> = ({ result, title, onNewSearch, bannerImage, artistImage, mediaType }) => {
   const [topSectionId, setTopSectionId] = useState<string>('resumo');
   const [selectedSectionId, setSelectedSectionId] = useState<string>('essencia');
   const [isSectionOpen, setIsSectionOpen] = useState<boolean>(false);
