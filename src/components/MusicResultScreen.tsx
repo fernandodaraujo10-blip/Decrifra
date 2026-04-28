@@ -347,59 +347,113 @@ const MusicResultScreen: React.FC<MusicResultScreenProps> = ({ result, title, on
                             className="h-full w-full object-cover"
                         />
                     </div>
+                  <div className="mb-5 flex items-center gap-4 px-1">
+                    <div className="h-16 w-16 rounded-2xl bg-white p-1 shadow-lg ring-1 ring-[#EADBC8]">
+                       <div className="h-full w-full rounded-xl overflow-hidden bg-[#F5E6D3]">
+                        <img 
+                              src={(() => {
+                                const portraitMap: Record<string, string> = {
+                                  'Paulo': '/portraits/paulo.png',
+                                  'Paulo de Tarso': '/portraits/paulo.png',
+                                  'Salomão': '/portraits/salomao.png',
+                                  'Dostoiévski': '/portraits/dostoievski.png',
+                                  'Freud': '/portraits/freud.png',
+                                  'Maquiavel': '/portraits/maquiavel.png',
+                                  'Sócrates': '/portraits/socrates.png',
+                                  'Jung': '/portraits/jung.png',
+                                  'Nietzsche': '/portraits/nietzsche.png',
+                                  'Sartre': '/portraits/sartre.png',
+                                  'Frankl': '/portraits/frankl.png',
+                                };
+                                const thinker = result.perspectives?.[selectedThinkerIndex];
+                                if (!thinker) return `https://ui-avatars.com/api/?background=F5E6D3&color=8A6E4B&bold=true`;
+                                return portraitMap[thinker.name] || `https://ui-avatars.com/api/?name=${encodeURIComponent(thinker.name)}&background=F5E6D3&color=8A6E4B&bold=true&font-size=0.33`;
+                              })()} 
+                              alt="Pensador" 
+                              className="h-full w-full object-cover"
+                          />
+                       </div>
+                    </div>
                     <div>
-                      <h4 className="serif text-[1.4rem] leading-none text-[#1F1A17]">{result.perspectives?.[selectedThinkerIndex]?.name || 'Pensador'}</h4>
-                      <p className="text-[0.7rem] font-bold text-[#9E650F] uppercase mt-1 tracking-[0.12em]">{result.perspectives?.[selectedThinkerIndex]?.subtitle || 'Visão Exegética'}</p>
+                      <h4 className="serif text-[1.6rem] leading-none text-[#1F1A17] tracking-tight">{result.perspectives?.[selectedThinkerIndex]?.name || 'Pensador'}</h4>
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="h-px w-4 bg-[#9E650F]/40" />
+                        <p className="text-[0.68rem] font-black text-[#9E650F] uppercase tracking-[0.18em]">{result.perspectives?.[selectedThinkerIndex]?.subtitle || 'Visão Exegética'}</p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto rounded-[1.4rem] border border-[#EADBC8] bg-[#FFFDF8] p-4 shadow-inner space-y-5 custom-scrollbar">
+                  <div className="flex-1 overflow-y-auto rounded-[1.8rem] border border-[#EADBC8] bg-white/80 p-5 shadow-inner space-y-7 custom-scrollbar backdrop-blur-sm">
                     <div className="relative">
-                      <span className="float-left text-[3.8rem] leading-[0.8] font-serif text-[#9E650F] mr-2 mt-1 select-none">
+                      <span className="float-left text-[4.2rem] leading-[0.7] font-serif text-[#9E650F] mr-3 mt-2 select-none opacity-90">
                         {(result.perspectives?.[selectedThinkerIndex]?.intro || ' ').charAt(0)}
                       </span>
-                      <p className="text-[0.88rem] leading-relaxed text-[#3A2D1F]">
+                      <p className="text-[0.95rem] leading-[1.6] text-[#3A2D1F] font-medium text-justify">
                         {(result.perspectives?.[selectedThinkerIndex]?.intro || ' ').slice(1)}
                       </p>
                     </div>
 
-                    <div className="h-px w-full bg-[#EADBC8]/60" />
+                    <div className="flex items-center gap-4 opacity-40">
+                      <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#9E650F]" />
+                      <Landmark size={14} className="text-[#9E650F]" />
+                      <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#9E650F]" />
+                    </div>
 
-                    <div className="space-y-4">
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-2 text-[#9E650F]">
-                          <BookOpen size={15} strokeWidth={2} />
-                          <h6 className="text-[0.65rem] font-bold uppercase tracking-wider">Interpretação</h6>
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2.5 text-[#9E650F]">
+                          <div className="h-5 w-5 rounded-full bg-[#9E650F]/10 flex items-center justify-center">
+                            <BookOpen size={13} strokeWidth={2.5} />
+                          </div>
+                          <h6 className="text-[0.7rem] font-black uppercase tracking-widest">Interpretação</h6>
                         </div>
-                        <p className="text-[0.82rem] leading-relaxed text-[#4A3F35]">{result.perspectives?.[selectedThinkerIndex]?.interpretation || result.perspectives?.[selectedThinkerIndex]?.commentary || 'Análise indisponível.'}</p>
+                        <p className="text-[0.88rem] leading-relaxed text-[#4A3F35] pl-7 border-l border-[#9E650F]/15">
+                          {result.perspectives?.[selectedThinkerIndex]?.interpretation || result.perspectives?.[selectedThinkerIndex]?.commentary || 'Análise em processamento.'}
+                        </p>
                       </div>
 
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-2 text-[#9E650F]">
-                          <Star size={15} strokeWidth={2} />
-                          <h6 className="text-[0.65rem] font-bold uppercase tracking-wider">Significado</h6>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2.5 text-[#9E650F]">
+                          <div className="h-5 w-5 rounded-full bg-[#9E650F]/10 flex items-center justify-center">
+                            <Star size={13} strokeWidth={2.5} />
+                          </div>
+                          <h6 className="text-[0.7rem] font-black uppercase tracking-widest">Significado</h6>
                         </div>
-                        <p className="text-[0.82rem] leading-relaxed text-[#4A3F35]">{result.perspectives?.[selectedThinkerIndex]?.meaning || 'Significado em processamento.'}</p>
+                        <p className="text-[0.88rem] leading-relaxed text-[#4A3F35] pl-7 border-l border-[#9E650F]/15">
+                          {result.perspectives?.[selectedThinkerIndex]?.meaning || 'O impacto simbólico está sendo processado para esta obra.'}
+                        </p>
                       </div>
 
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-2 text-[#9E650F]">
-                          <Zap size={15} strokeWidth={2} />
-                          <h6 className="text-[0.65rem] font-bold uppercase tracking-wider">Aplicação</h6>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2.5 text-[#9E650F]">
+                          <div className="h-5 w-5 rounded-full bg-[#9E650F]/10 flex items-center justify-center">
+                            <Zap size={13} strokeWidth={2.5} />
+                          </div>
+                          <h6 className="text-[0.7rem] font-black uppercase tracking-widest">Aplicação</h6>
                         </div>
-                        <p className="text-[0.82rem] leading-relaxed text-[#4A3F35]">{result.perspectives?.[selectedThinkerIndex]?.application || 'Aplicação prática em processamento.'}</p>
+                        <p className="text-[0.88rem] leading-relaxed text-[#4A3F35] pl-7 border-l border-[#9E650F]/15">
+                          {result.perspectives?.[selectedThinkerIndex]?.application || 'A aplicação prática está sendo delineada para sua reflexão.'}
+                        </p>
                       </div>
                     </div>
 
-                    <div className="rounded-2xl bg-[#F8F1E5] p-4 border-l-4 border-[#9E650F] shadow-sm italic relative overflow-hidden">
-                      <p className="text-[0.95rem] leading-relaxed text-[#2C241D] relative z-10">
-                        "{result.perspectives?.[selectedThinkerIndex]?.impactPhrase || result.perspectives?.[selectedThinkerIndex]?.quote || 'Reflexão em processamento...'}"
-                      </p>
-                      {result.perspectives?.[selectedThinkerIndex]?.source && (
-                        <p className="mt-2 text-[0.75rem] font-bold text-[#9E650F] not-italic relative z-10">
-                          {result.perspectives?.[selectedThinkerIndex]?.source}
+                    <div className="rounded-[1.6rem] bg-gradient-to-br from-[#FDF8F1] to-[#F8F1E5] p-6 border border-[#EADBC8] shadow-sm relative overflow-hidden group">
+                      <div className="absolute -top-4 -right-4 opacity-5 group-hover:scale-110 transition-transform duration-700">
+                         <Landmark size={120} />
+                      </div>
+                      <div className="relative z-10">
+                        <p className="serif text-[1.2rem] leading-snug text-[#2C241D] text-center italic font-medium">
+                          “{result.perspectives?.[selectedThinkerIndex]?.impactPhrase || result.perspectives?.[selectedThinkerIndex]?.quote || 'A sabedoria reside na busca constante pelo sentido.'}”
                         </p>
-                      )}
+                        {result.perspectives?.[selectedThinkerIndex]?.source && (
+                          <div className="mt-4 flex flex-col items-center">
+                            <div className="h-px w-8 bg-[#9E650F]/30 mb-2" />
+                            <p className="text-[0.7rem] font-bold text-[#9E650F] uppercase tracking-tighter">
+                              {result.perspectives?.[selectedThinkerIndex]?.source}
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

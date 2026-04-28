@@ -16,8 +16,10 @@
 - [x] Implementar UI detalhada das "Visões" com capitular e seções (Conforme imagem)
 - [x] Corrigir "Tela Preta": Adicionada segurança (optional chaining) em todos os acessos a dados da API no MusicResultScreen.
 - [x] **Densidade da IA**: Configurado prompt para exigir mínimo de 3 frases densas por seção de análise.
+- [x] **Commit**: Alterações salvas no repositório e enviadas (Push OK).
+- [x] **Deploy**: Cloud Functions enviadas com sucesso para o servidor (Deploy OK).
 - [x] Atualizar RESPONSE_SCHEMA para 10 pensadores com 8 campos cada
-- [ ] Validar deploy e estabilidade da resposta (Aguardando deploy)
+- [x] Validar deploy e estabilidade da resposta (Concluído)
 - [x] **Diagnóstico**: Identificado que o modelo primário (`gemini-2.5-flash`) não existe, causando falha e atraso por fallback automático.
 - [x] **Diagnóstico**: A barra de progresso travava em 98% de forma rígida, dando a impressão de que o app havia parado.
 - [x] **Correção**: Atualizado `MODEL_CANDIDATES` no backend para usar `gemini-1.5-flash` como primário.

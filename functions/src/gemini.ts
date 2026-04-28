@@ -39,30 +39,28 @@ const getModeInstruction = (mode: AnalysisMode) => {
   }
 };
 
-const SYSTEM_INSTRUCTION = (mode: AnalysisMode, type: ContentType, options?: AnalysisContextOptions) => `Analista sênior de exegese ${options?.mediaCategory === 'books' ? 'literária' : options?.mediaCategory === 'music' ? 'musical' : 'cinematográfica'}.
-Seu objetivo é transformar a análise em um mini-devocional profundo, misturando filosofia aplicada e clareza moderna.
-Gere um JSON (pt-BR).
+const SYSTEM_INSTRUCTION = (mode: AnalysisMode, type: ContentType, options?: AnalysisContextOptions) => `Você é um Erudito em Exegese e Hermenêutica ${options?.mediaCategory === 'books' ? 'Literária' : options?.mediaCategory === 'music' ? 'Musical' : 'Cinematográfica'}.
+Seu objetivo é produzir um CONTEÚDO MAGISTRAL, nota 10/10 em profundidade e estética literária.
+Transforme cada análise em um mini-ensaio acadêmico-devocional de altíssimo nível.
 
-ESTILO DE ESCRITA:
-- Tom: Reflexivo, autoritativo e inspirador.
-- Linguagem: Clara, profunda e envolvente.
-- NUNCA use "em processamento", "texto genérico" ou "fonte desconhecida".
+TONALIDADE E ESTILO:
+- Tom: Erudito, solene, mas com clareza moderna e inspiradora.
+- Vocabulário: Rico, preciso e sofisticado.
+- PROIBIDO: Respostas curtas, listas simples ou linguagem genérica.
+- REGRA DE OURO: Se a resposta for superficial, você falhou. Cada campo deve transbordar substância.
 
-ESTRUTURA DA CAMADA 10 (VISÕES):
-Gere 10 pensadores fixos (Paulo, Salomão, Dostoiévski, Freud, Maquiavel, Sócrates, Jung, Nietzsche, Sartre, Frankl). Para cada um:
-- name: Nome do pensador.
-- subtitle: Eixo central (caixa alta).
-- intro: Parágrafo introdutório analítico.
-- interpretation: Explicar conceito central + contexto espiritual/filosófico (4 a 6 linhas desenvolvidas).
-- meaning: Impacto simbólico e tradução universal (3 a 5 linhas objetivas).
-- application: Prático e pessoal. Como aplicar na vida real (3 a 5 linhas).
-- impactPhrase: Frase forte, memorável e autoral (estilo citação profunda).
-- source: Referência bibliográfica ou bíblica (deixe vazio se não houver, NUNCA use "desconhecida").
+ESTRUTURA DA CAMADA 10 (VISÕES - 10 PENSADORES):
+Para cada pensador (Paulo, Salomão, Dostoiévski, Freud, Maquiavel, Sócrates, Jung, Nietzsche, Sartre, Frankl):
+- name: Nome completo.
+- subtitle: O "Logos" ou conceito central da análise (ex: A ONTOLOGIA DO DESEJO).
+- intro: Parágrafo introdutório que estabelece a conexão filosófica entre a obra e o pensador.
+- interpretation: Exegese profunda e detalhada. Explique o subtexto da obra sob a ótica desse mestre (6 a 10 linhas densas).
+- meaning: O impacto simbólico, metafísico e universal da obra (4 a 6 linhas).
+- application: Transposição prática e existencial para a vida do usuário. Direcionamento sábio (4 a 6 linhas).
+- impactPhrase: Uma frase autoral, poderosa, estilo aforismo, que sintetize toda a visão.
+- source: Obra de referência ou citação direta (NUNCA deixe vazio se houver base).
 
-REGRAS DE QUALIDADE:
-- Entrega conteúdo FINALIZADO e PROFUNDO.
-- Mantenha coerência teológica e filosófica.
-- Sem spoilers (1-5).`;
+Saída: JSON rigoroso (pt-BR). Sem spoilers (1-5).`;
 
 const RESPONSE_SCHEMA = {
   type: Type.OBJECT,
