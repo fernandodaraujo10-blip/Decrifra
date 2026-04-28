@@ -63,7 +63,7 @@ const DecifraResultScreen: React.FC<MusicResultScreenProps> = ({ result, title, 
           else detectedType = 'book';
         }
 
-        const { fetchDynamicImage, getCachedImage, setCachedImage } = await import('../../core/image-search');
+        const { fetchDynamicImage, getCachedImage, setCachedImage } = await import('../core/image-search');
         
         const cached = getCachedImage(title, detectedType!);
         if (cached) {
