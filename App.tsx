@@ -463,8 +463,55 @@ const ChipsRow: React.FC<{ chips: string[]; value: string | null; onChange: (val
 
 const InterpretButton: React.FC<{ disabled: boolean; loading: boolean; onClick: () => void; label?: string }> = ({ disabled, loading, onClick, label = "INTERPRETAR AGORA" }) => (
   <button disabled={disabled} onClick={onClick} className="w-full h-11 rounded-2xl bg-gradient-to-r from-[#C99022] via-[#DCA63A] to-[#B87A17] text-white text-sm font-semibold tracking-wide shadow-[0_10px_22px_rgba(179,123,22,0.32)] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-    {loading ? "PROCESSANDO..." : <><Sparkles size={16} strokeWidth={2} />{label}</>}
+    {loading ? "DECIFRANDO..." : <><Sparkles size={16} strokeWidth={2} />{label}</>}
   </button>
+);
+
+const DecipheringOverlay: React.FC<{ progress: number; message: string; theme: ThemeMode }> = ({ progress, message, theme }) => (
+  <div className="absolute inset-0 z-[2000] flex flex-col items-center justify-center p-6 bg-black/40 backdrop-blur-md animate-in fade-in duration-300">
+    <div className={`w-full max-w-[300px] p-6 rounded-[2rem] ${theme === 'dark' ? 'bg-[#2a241e]' : 'bg-[#f8f5f0]'} border border-amber-500/30 shadow-2xl flex flex-col items-center gap-6 text-center`}>
+      <div className="relative w-24 h-24 flex items-center justify-center">
+        <svg className="w-full h-full transform -rotate-90">
+          <circle
+            cx="48"
+            cy="48"
+            r="44"
+            stroke="currentColor"
+            strokeWidth="4"
+            fill="transparent"
+            className={theme === 'dark' ? 'text-zinc-800' : 'text-zinc-200'}
+          />
+          <circle
+            cx="48"
+            cy="48"
+            r="44"
+            stroke="#D5A54A"
+            strokeWidth="4"
+            fill="transparent"
+            strokeDasharray={2 * Math.PI * 44}
+            strokeDashoffset={2 * Math.PI * 44 * (1 - progress / 100)}
+            strokeLinecap="round"
+            className="transition-all duration-300 ease-out"
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center flex-col">
+          <span className="text-2xl font-black serif text-[#D5A54A]">{progress}%</span>
+        </div>
+      </div>
+      
+      <div className="space-y-2">
+        <h3 className="text-xl serif font-bold text-[#D5A54A] animate-pulse">DECIFRANDO</h3>
+        <p className={`text-sm font-medium h-10 ${theme === 'dark' ? 'text-zinc-400' : 'text-zinc-600'}`}>{message}</p>
+      </div>
+
+      <div className="w-full h-1.5 bg-zinc-200 rounded-full overflow-hidden">
+        <div 
+          className="h-full bg-gradient-to-r from-[#C99022] to-[#DCA63A] transition-all duration-300"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+    </div>
+  </div>
 );
 
 const CardsSection: React.FC<{ title: string; cards: { id: string; title: string; subtitle: string; image?: string; hideOverlay?: boolean }[]; onSelect: (id: string) => void }> = ({ title, cards, onSelect }) => (
@@ -710,6 +757,61 @@ const App: React.FC = () => {
   const moviesSearchRequestId = useRef(0);
   const booksSearchRequestId = useRef(0);
 
+  // Novos estados para barra de progresso
+  const [decipherProgress, setDecipherProgress] = useState(0);
+  const [decipherMessage, setDecipherMessage] = useState('');
+  const progressTimerRef = useRef<number | null>(null);
+
+  const startProgressAnimation = (category: string) => {
+    setDecipherProgress(0);
+    const messages = {
+      movies: ["Iniciando decifração do filme...", "Consultando fontes cinematográficas...", "Analisando arco dos personagens...", "Decifrando simbolismos ocultos...", "Preparando sua análise profunda..."],
+      books: ["Abrindo os portais da literatura...", "Consultando registros históricos...", "Analisando subtexto e camadas...", "Interpretando a visão do autor...", "Finalizando sua decifração..."],
+      music: ["Sintonizando na frequência da obra...", "Analisando a lírica e melodia...", "Interpretando emoções centrais...", "Buscando referências musicais...", "Quase pronto..."]
+    }[category as 'movies' | 'books' | 'music'] || ["Iniciando...", "Analisando...", "Interpretando...", "Finalizando..."];
+
+    setDecipherMessage(messages[0]);
+    let currentProgress = 0;
+    let messageIndex = 0;
+
+    if (progressTimerRef.current) window.clearInterval(progressTimerRef.current);
+
+    progressTimerRef.current = window.setInterval(() => {
+      // Se já passou de 90%, desacelera drasticamente o progresso
+      const increment = currentProgress < 90 
+        ? (Math.random() * 3 + 1) 
+        : (Math.random() * 0.1 + 0.02); // Incremento minúsculo após 90%
+      
+      currentProgress += increment;
+      
+      // Limite suave em 99% para nunca parecer "travado" mas indicar que está no fim
+      if (currentProgress >= 99.5) {
+        currentProgress = 99.5;
+      }
+      
+      setDecipherProgress(Math.floor(currentProgress));
+
+      // Mudar mensagem a cada ~20%
+      const newMessageIndex = Math.min(
+        Math.floor((currentProgress / 100) * messages.length),
+        messages.length - 1
+      );
+      if (newMessageIndex !== messageIndex && messages[newMessageIndex]) {
+        messageIndex = newMessageIndex;
+        setDecipherMessage(messages[messageIndex]);
+      }
+    }, 200);
+  };
+
+  const completeProgress = () => {
+    if (progressTimerRef.current) window.clearInterval(progressTimerRef.current);
+    setDecipherProgress(100);
+    setDecipherMessage("Decifração concluída!");
+    setTimeout(() => {
+      setDecipherProgress(0);
+    }, 500);
+  };
+
   const normalize = (v: string) => v.replace(/\s+/g, ' ').trim();
   const buildLocalAutocomplete = (queryText: string, pool: string[], idPrefix: string): UnifiedSearchResult[] => {
     const cleaned = normalize(queryText).toLowerCase();
@@ -893,6 +995,7 @@ const App: React.FC = () => {
     };
     setMusicLoading(true);
     setMusicError(null);
+    startProgressAnimation('music');
     try {
       const mode: AnalysisMode = musicMainFocus === 'emotion' ? 'reflexivo' : musicAnalysisType === "Interpretação geral" ? 'direto' : 'profundo';
       const result = await interpretMovie(cleaned, mode, 'musica', { ...payload, focusChip: payload.chipFocus });
@@ -911,6 +1014,7 @@ const App: React.FC = () => {
       setMusicError(e instanceof Error ? e.message : 'Erro desconhecido');
       setToast('Falha ao interpretar música/artista. Tente novamente.');
     } finally {
+      completeProgress();
       setMusicLoading(false);
     }
   };
@@ -931,6 +1035,7 @@ const App: React.FC = () => {
     };
     setMoviesLoading(true);
     setMoviesError(null);
+    startProgressAnimation('movies');
     try {
       const modeByStyle: Record<MoviesResponseStyle, AnalysisMode> = {
         resumido: 'direto',
@@ -955,6 +1060,7 @@ const App: React.FC = () => {
       setMoviesError(e instanceof Error ? e.message : 'Erro desconhecido');
       setToast('Falha ao interpretar filme/série. Tente novamente.');
     } finally {
+      completeProgress();
       setMoviesLoading(false);
     }
   };
@@ -974,6 +1080,7 @@ const App: React.FC = () => {
     };
     setBooksLoading(true);
     setBooksError(null);
+    startProgressAnimation('books');
     try {
       const mode: AnalysisMode = booksDepthMode === 'quick' ? 'direto' : booksAnalysisType === 'Contexto histórico e mensagem' ? 'reflexivo' : 'profundo';
       const result = await interpretMovie(cleaned, mode, 'livro', payload);
@@ -992,6 +1099,7 @@ const App: React.FC = () => {
       setBooksError(e instanceof Error ? e.message : 'Erro desconhecido');
       setToast('Falha ao interpretar livro/autor. Tente novamente.');
     } finally {
+      completeProgress();
       setBooksLoading(false);
     }
   };
@@ -1424,6 +1532,13 @@ const App: React.FC = () => {
           className={`w-full px-4 ${shouldLockScroll ? 'pt-2 overflow-hidden' : 'pt-4'}`}
           style={shouldLockScroll ? { height: `calc(100% - ${BOTTOM_NAV_HEIGHT}px)`, paddingBottom: '6px' } : { paddingBottom: `${BOTTOM_NAV_HEIGHT + 12}px` }}
         >
+          {(musicLoading || moviesLoading || booksLoading) && (
+            <DecipheringOverlay 
+              progress={decipherProgress} 
+              message={decipherMessage} 
+              theme={themeMode} 
+            />
+          )}
           {activeTab === 'home' && renderHome()}
           {activeTab === 'music' && renderMusic()}
           {activeTab === 'store' && renderStore()}

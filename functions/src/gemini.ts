@@ -22,9 +22,9 @@ export interface AnalysisContextOptions {
 }
 
 const MODEL_CANDIDATES = [
-  process.env.GEMINI_MODEL || "gemini-2.5-flash",
-  "gemini-flash-latest",
+  process.env.GEMINI_MODEL || "gemini-1.5-flash",
   "gemini-2.0-flash",
+  "gemini-flash-latest",
 ];
 
 const getModeInstruction = (mode: AnalysisMode) => {
@@ -39,21 +39,30 @@ const getModeInstruction = (mode: AnalysisMode) => {
   }
 };
 
-const SYSTEM_INSTRUCTION = (mode: AnalysisMode, type: ContentType, options?: AnalysisContextOptions) => `Analista sênior de exegese ${options?.mediaCategory === 'books' ? 'literária' : options?.mediaCategory === 'music' ? 'musical' : 'cinematográfica'}. Gere um JSON (pt-BR).
-${getModeInstruction(mode)}
-Camada 9 (Síntese): Obra sustenta X, revelando Y. 3 argumentos.
-Camada 10 (Visões): 10 pensadores (Paulo, Salomão, Dostoiévski, Freud, Maquiavel, Sócrates, Jung, Nietzsche, Sartre, Frankl). Nome, Eixo e Comentário.
-Regras: Sem spoilers (1-5), arquétipos em personagens, conexões reais.
-Contexto do pedido:
-- categoria: ${options?.mediaCategory || "movies_series"}
-- tipo de mídia: ${options?.mediaType || type}
-- tipo de busca (livros): ${options?.searchType || "não informado"}
-- profundidade (livros): ${options?.depthMode || "não informado"}
-- modo spoiler: ${options?.spoilerMode ? "com spoiler liberado" : "sem spoiler (evitar revelações diretas do final em camadas iniciais)"}
-- tipo de análise solicitado: ${options?.analysisType || "não informado"}
-- foco rápido: ${options?.focusChip || "nenhum"}
-- plano do usuário: ${options?.userPlan || "não informado"}
-- id do usuário: ${options?.userId || "não informado"}.`;
+const SYSTEM_INSTRUCTION = (mode: AnalysisMode, type: ContentType, options?: AnalysisContextOptions) => `Analista sênior de exegese ${options?.mediaCategory === 'books' ? 'literária' : options?.mediaCategory === 'music' ? 'musical' : 'cinematográfica'}.
+Seu objetivo é transformar a análise em um mini-devocional profundo, misturando filosofia aplicada e clareza moderna.
+Gere um JSON (pt-BR).
+
+ESTILO DE ESCRITA:
+- Tom: Reflexivo, autoritativo e inspirador.
+- Linguagem: Clara, profunda e envolvente.
+- NUNCA use "em processamento", "texto genérico" ou "fonte desconhecida".
+
+ESTRUTURA DA CAMADA 10 (VISÕES):
+Gere 10 pensadores fixos (Paulo, Salomão, Dostoiévski, Freud, Maquiavel, Sócrates, Jung, Nietzsche, Sartre, Frankl). Para cada um:
+- name: Nome do pensador.
+- subtitle: Eixo central (caixa alta).
+- intro: Parágrafo introdutório analítico.
+- interpretation: Explicar conceito central + contexto espiritual/filosófico (4 a 6 linhas desenvolvidas).
+- meaning: Impacto simbólico e tradução universal (3 a 5 linhas objetivas).
+- application: Prático e pessoal. Como aplicar na vida real (3 a 5 linhas).
+- impactPhrase: Frase forte, memorável e autoral (estilo citação profunda).
+- source: Referência bibliográfica ou bíblica (deixe vazio se não houver, NUNCA use "desconhecida").
+
+REGRAS DE QUALIDADE:
+- Entrega conteúdo FINALIZADO e PROFUNDO.
+- Mantenha coerência teológica e filosófica.
+- Sem spoilers (1-5).`;
 
 const RESPONSE_SCHEMA = {
   type: Type.OBJECT,
@@ -210,10 +219,15 @@ const RESPONSE_SCHEMA = {
         type: Type.OBJECT,
         properties: {
           name: { type: Type.STRING },
-          axis: { type: Type.STRING },
-          commentary: { type: Type.STRING },
+          subtitle: { type: Type.STRING },
+          intro: { type: Type.STRING },
+          interpretation: { type: Type.STRING },
+          meaning: { type: Type.STRING },
+          application: { type: Type.STRING },
+          impactPhrase: { type: Type.STRING },
+          source: { type: Type.STRING },
         },
-        required: ["name", "axis", "commentary"]
+        required: ["name", "subtitle", "intro", "interpretation", "meaning", "application", "impactPhrase", "source"]
       }
     }
   },
@@ -221,7 +235,7 @@ const RESPONSE_SCHEMA = {
 };
 
 export const interpretMovie = onCall(
-  { secrets: [geminiApiKey], timeoutSeconds: 300, region: "southamerica-east1" },
+  { secrets: [geminiApiKey], timeoutSeconds: 540, region: "southamerica-east1", memory: "1GiB" },
   async (request): Promise<MovieAnalysis> => {
     const { movieName, mode = 'profundo', type = 'filme', options } = request.data;
     if (!movieName) {

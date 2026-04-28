@@ -6,9 +6,9 @@ const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
 const geminiApiKey = (0, params_1.defineSecret)("GEMINI_API_KEY");
 const MODEL_CANDIDATES = [
-    process.env.GEMINI_MODEL || "gemini-2.5-flash",
-    "gemini-flash-latest",
+    process.env.GEMINI_MODEL || "gemini-1.5-flash",
     "gemini-2.0-flash",
+    "gemini-flash-latest",
 ];
 const getModeInstruction = (mode) => {
     switch (mode) {
@@ -25,7 +25,7 @@ const SYSTEM_INSTRUCTION = (mode, type, options) => `Analista sênior de exegese
 ${getModeInstruction(mode)}
 Camada 9 (Síntese): Obra sustenta X, revelando Y. 3 argumentos.
 Camada 10 (Visões): 10 pensadores (Paulo, Salomão, Dostoiévski, Freud, Maquiavel, Sócrates, Jung, Nietzsche, Sartre, Frankl). Nome, Eixo e Comentário.
-Regras: Sem spoilers (1-5), arquétipos em personagens, conexões reais.
+Regras: Sem spoilers (1-5), arquétipos em personagens, conexões reais. Seja EXTREMAMENTE conciso em cada campo do JSON para reduzir a latência de geração, sem perder a profundidade analítica.
 Contexto do pedido:
 - categoria: ${options?.mediaCategory || "movies_series"}
 - tipo de mídia: ${options?.mediaType || type}
@@ -200,7 +200,7 @@ const RESPONSE_SCHEMA = {
     },
     required: ["info", "ratings", "characters", "whyWatch", "hiddenElements", "symbols", "characterConflicts", "exegesis", "lessons", "alternativeReadings", "spoilers", "deepEssay", "similarMovies", "realLifeStory", "synthesis", "perspectives"]
 };
-exports.interpretMovie = (0, https_1.onCall)({ secrets: [geminiApiKey], timeoutSeconds: 300, region: "southamerica-east1" }, async (request) => {
+exports.interpretMovie = (0, https_1.onCall)({ secrets: [geminiApiKey], timeoutSeconds: 540, region: "southamerica-east1", memory: "1GiB" }, async (request) => {
     const { movieName, mode = 'profundo', type = 'filme', options } = request.data;
     if (!movieName) {
         throw new https_1.HttpsError("invalid-argument", "movieName is required");

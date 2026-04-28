@@ -88,8 +88,13 @@ export interface Synthesis {
 
 export interface ThinkerPerspective {
   name: string;
-  axis: string;
-  commentary: string;
+  subtitle: string;
+  intro: string;
+  interpretation: string;
+  meaning: string;
+  application: string;
+  impactPhrase: string;
+  source: string;
 }
 
 export interface MovieAnalysis {

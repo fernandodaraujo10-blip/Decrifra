@@ -4,10 +4,8 @@ import {
   BookOpen,
   ChevronDown,
   Eye,
-  Grid3X3,
   Heart,
   Landmark,
-  Music2,
   Search,
   Sparkles,
   Star,
@@ -41,8 +39,10 @@ const makeSnippet = (text?: string, fallback = 'Conteúdo indisponível no momen
 };
 
 const MusicResultScreen: React.FC<MusicResultScreenProps> = ({ result, title, onNewSearch, bannerImage, artistImage }) => {
+  const [topSectionId, setTopSectionId] = useState<string>('resumo');
   const [selectedSectionId, setSelectedSectionId] = useState<string>('essencia');
   const [isSectionOpen, setIsSectionOpen] = useState<boolean>(false);
+  const [selectedThinkerIndex, setSelectedThinkerIndex] = useState<number | null>(null);
 
   const compactGenre = useMemo(() => {
     const raw = (result.info?.genre || 'Rock/Pop').trim();
@@ -56,12 +56,39 @@ const MusicResultScreen: React.FC<MusicResultScreenProps> = ({ result, title, on
     return (result.ratings.reduce((acc, curr) => acc + Number(curr.score || 0), 0) / result.ratings.length).toFixed(1);
   }, [result]);
 
+  const topContent = useMemo(() => {
+    switch (topSectionId) {
+      case 'resumo':
+        return {
+          label: 'Resumo da Obra',
+          text: result.exegesis?.centralThesis || result.whyWatch || "Análise em processamento para extração dos pontos centrais da obra."
+        };
+      case 'essencia':
+        return {
+          label: 'A Essência',
+          text: result.exegesis?.centralThesis || result.whyWatch || "Significado central e tese da obra."
+        };
+      case 'notas':
+        return {
+          label: `Notas (${overallRating})`,
+          text: result.ratings?.map(r => `${r.criterion}: ${r.score}`).join(' | ') || "Avaliação detalhada dos critérios técnicos e artísticos."
+        };
+      case 'leitura':
+        return {
+          label: 'Leitura Crítica',
+          text: result.info?.synopsis || "Análise da estrutura, recursos e narrativa da obra."
+        };
+      default:
+        return { label: 'Resumo', text: '' };
+    }
+  }, [topSectionId, result, overallRating]);
+
   const sections = useMemo<SectionItem[]>(() => {
     const ratingExplain = result.ratings?.slice(0, 2).map((r) => `${r.criterion}: ${r.explanation}`).join(' ') || '';
     const symbols = result.symbols?.slice(0, 2).map((s) => `${s.name}: ${s.representation}`).join(' ') || '';
     const conflicts = result.characterConflicts?.slice(0, 2).map((c) => `${c.name}: ${c.internalContradiction}`).join(' ') || '';
     const lessons = result.lessons?.existential?.slice(0, 2).join(' ') || '';
-    const perspectives = result.perspectives?.slice(0, 2).map((p) => `${p.name}: ${p.commentary}`).join(' ') || '';
+    const perspectives = result.perspectives?.slice(0, 2).map((p) => `${p.name}`).join(', ') || '';
 
     return [
       { id: 'essencia', title: 'A Essência', subtitle: 'Significado central.', detail: makeSnippet(result.exegesis?.centralThesis || result.whyWatch), icon: Sparkles },
@@ -74,12 +101,12 @@ const MusicResultScreen: React.FC<MusicResultScreenProps> = ({ result, title, on
       { id: 'licoes', title: 'Lições e Reflexões', subtitle: 'Aprendizados centrais.', detail: makeSnippet(lessons), icon: BookOpen },
       { id: 'leituras', title: 'Leituras Alternativas', subtitle: 'Outras perspectivas.', detail: makeSnippet([result.alternativeReadings?.psychological, result.alternativeReadings?.philosophical, result.alternativeReadings?.spiritual].filter(Boolean).join(' ')), icon: Target },
       { id: 'sintese', title: 'Síntese', subtitle: 'Conexões principais.', detail: makeSnippet(`${result.synthesis?.centralThesis || ''} ${result.synthesis?.conclusion || ''}`), icon: BookOpen },
-      { id: 'visoes', title: 'Visões', subtitle: 'Percepções pessoais.', detail: makeSnippet(perspectives), icon: Music2, fullWidth: true },
+      { id: 'visoes', title: 'Visões', subtitle: 'Percepções de 10 pensadores.', detail: makeSnippet(perspectives), icon: Landmark, fullWidth: true },
     ];
   }, [result]);
 
   const selected = useMemo(() => sections.find((s) => s.id === selectedSectionId) ?? sections[0], [sections, selectedSectionId]);
-  const SelectedIcon = selected.icon;
+  const SelectedIcon = selected?.icon || Sparkles;
 
   const detailBlocks = useMemo(() => {
     const parts = selected.detail.split(/[.!?]\s+/).map((x) => x.trim()).filter(Boolean);
@@ -93,87 +120,95 @@ const MusicResultScreen: React.FC<MusicResultScreenProps> = ({ result, title, on
 
   return (
     <div className="h-full overflow-hidden">
-      <div className="h-full flex flex-col gap-2">
-        <div className="flex-none space-y-2">
-          <section className="relative h-[118px] overflow-hidden rounded-[1.3rem] shadow-[0_10px_22px_rgba(0,0,0,0.28)]">
-            <img src={bannerImage} alt="Decifra Músicas" className="absolute inset-0 h-full w-full object-cover" />
-          </section>
-
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="serif text-[2.05rem] leading-none text-[#1F1A17]">{title}</h2>
+      <div className="h-full flex flex-col gap-3">
+        <div className="flex-none space-y-3">
+          {/* Topo com Título e Nova Busca */}
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <h2 className="serif text-[2.1rem] leading-none text-[#1F1A17]">{title}</h2>
             <button
               type="button"
               onClick={onNewSearch}
-              className="inline-flex h-8.5 items-center gap-1.5 rounded-full border border-[#E4D4C1] bg-[#FFFDF8] px-2.5 text-[0.84rem] font-semibold text-[#3A2D1F]"
+              className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#E4D4C1] bg-[#FFFDF8] px-3 text-[0.8rem] font-semibold text-[#3A2D1F] shadow-sm"
             >
-              <Search size={15} strokeWidth={1.9} />
+              <Search size={14} strokeWidth={1.9} />
               Nova busca
             </button>
           </div>
 
-          <section className="grid grid-cols-4 rounded-[1.05rem] border border-[#E4D4C1] bg-[#FFFDF8] px-1 py-0.5">
+          {/* Nova Seção Dinâmica: Card + Foto (Alturas reduzidas para liberar espaço) */}
+          <section className="flex gap-2">
+            <div className="flex-[0.85] rounded-[1.25rem] border border-[#E4D4C1] bg-[#FFFDF8] p-2.5 shadow-sm flex flex-col justify-center min-h-[130px]">
+              <p className="text-[0.62rem] font-bold uppercase tracking-wider text-[#9E650F] mb-0.5">{topContent.label}</p>
+              <p className="text-[0.76rem] leading-relaxed text-[#3A2D1F] line-clamp-5">
+                {topContent.text}
+              </p>
+            </div>
+            
+            <div className="flex-1 min-w-[115px] h-[130px] rounded-[1.25rem] overflow-hidden border border-[#E4D4C1] shadow-md">
+              <img src={artistImage} alt="Poster" className="h-full w-full object-cover bg-[#E9DFD2]" />
+            </div>
+          </section>
+
+          <section className="grid grid-cols-4 rounded-[1.05rem] border border-[#E4D4C1] bg-[#FFFDF8] px-1 py-0.5 shadow-sm">
             {[
-              { id: 'essencia', label: 'ESSÊNCIA', icon: Sparkles, active: true },
-              { id: 'notas', label: 'NOTAS', icon: Star, active: false },
-              { id: 'leitura', label: 'LEITURA CRÍTICA', icon: BookOpen, active: false },
-              { id: 'contexto', label: 'CONTEXTO', icon: Landmark, active: false },
+              { id: 'resumo', label: 'RESUMO DA OBRA', icon: Sparkles },
+              { id: 'essencia', label: 'ESSÊNCIA', icon: Landmark },
+              { id: 'notas', label: `NOTAS (${overallRating})`, icon: Star },
+              { id: 'leitura', label: 'LEITURA CRÍTICA', icon: BookOpen },
             ].map((tab, idx) => {
               const Icon = tab.icon;
+              const isActive = topSectionId === tab.id;
               return (
-                <div key={tab.id} className={`px-1 py-1 text-center ${idx < 3 ? 'border-r border-[#E7DACA]' : ''}`}>
-                  <div className={`mb-0.5 flex items-center justify-center gap-1 text-[0.6rem] font-bold tracking-wide ${tab.active ? 'text-[#2A2018]' : 'text-[#3B2F24]'}`}>
-                    <Icon size={11} className={tab.active ? 'text-[#C8871A]' : 'text-[#A56C1A]'} />
-                    <span>{tab.label}</span>
+                <button 
+                  key={tab.id} 
+                  onClick={() => setTopSectionId(tab.id)}
+                  className={`px-0.5 py-1 text-center transition-all ${idx < 3 ? 'border-r border-[#E7DACA]' : ''}`}
+                >
+                  <div className={`mb-0.5 flex flex-col items-center justify-center gap-0.5 text-[0.58rem] font-bold tracking-tight ${isActive ? 'text-[#2A2018]' : 'text-[#8A7763]'}`}>
+                    <Icon size={11} className={isActive ? 'text-[#C8871A]' : 'text-[#A56C1A]'} />
+                    <span className="leading-tight">{tab.label}</span>
                   </div>
-                  {tab.active ? <div className="mx-auto h-[2px] w-12 rounded-full bg-[#C8871A]" /> : <div className="h-[2px]" />}
-                </div>
+                  {isActive ? <div className="mx-auto h-[2px] w-12 rounded-full bg-[#C8871A]" /> : <div className="h-[2px]" />}
+                </button>
               );
             })}
           </section>
 
           <section className="grid grid-cols-2 gap-2">
-            <div className="rounded-[1.15rem] border border-[#E4D4C1] bg-[#FFFDF8] px-2.5 pb-2 pt-1.5">
-              <div className="-mt-0.5 flex items-center gap-2">
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#E8DCCB] bg-white text-[#2A2018]">
-                  <Star size={17} strokeWidth={1.8} />
-                </span>
-                <div>
-                  <p className="text-[0.9rem] text-[#2C241D]">Nota Geral</p>
-                  <div className="flex items-baseline gap-1">
-                    <span className="serif text-[1.95rem] leading-none text-[#B87617] tabular-nums">{overallRating}</span>
-                    <span className="text-[1.2rem] leading-none text-[#2C241D]">/10</span>
-                  </div>
-                </div>
+            <div className="rounded-[1.15rem] border border-[#E4D4C1] bg-[#FFFDF8] px-2.5 py-1.5 shadow-sm flex flex-col justify-center">
+              <div className="space-y-0.5 text-[0.78rem] text-[#2C251F] leading-tight">
+                <p className="truncate"><strong>Gênero:</strong> {compactGenre}</p>
+                <p><strong>Ano:</strong> {result.info?.year || 'N/A'}</p>
+                <p className="truncate"><strong>Autor/Dir:</strong> {result.info?.director || result.info?.author || 'N/A'}</p>
               </div>
-              <button type="button" className="mt-1.5 inline-flex h-7.5 w-full items-center justify-center gap-1.5 rounded-full border border-[#E6D7C5] bg-[#FFF8EC] px-2 text-[0.64rem] font-semibold text-[#2D231B] whitespace-nowrap">
-                <Grid3X3 size={12} className="text-[#C8871A] flex-shrink-0" />
-                9 espaços de respostas
-                <ChevronDown size={12} className="-rotate-90 text-[#A56D1A] flex-shrink-0" />
-              </button>
             </div>
 
-            <div className="rounded-[1.15rem] border border-[#E4D4C1] bg-[#FFFDF8] p-2">
-              <div className="flex gap-2">
-                <img src={artistImage} alt="Artista" className="h-[90px] w-[68px] rounded-xl object-cover bg-[#E9DFD2]" />
+            <button 
+              onClick={() => {
+                setSelectedSectionId('visoes');
+                setIsSectionOpen(true);
+                setSelectedThinkerIndex(null);
+              }}
+              className="rounded-[1.15rem] border border-[#E4D4C1] bg-[#FFFDF8] px-2.5 py-1.5 shadow-sm text-left transition-transform active:scale-[0.98]"
+            >
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#E8DCCB] bg-white text-[#2A2018]">
+                  <Landmark size={18} strokeWidth={1.8} />
+                </span>
                 <div className="min-w-0">
-                  <p className="serif text-[1.22rem] leading-none text-[#1F1A17]">John Lennon</p>
-                  <div className="mt-1 space-y-0.5 text-[0.63rem] text-[#2C251F] leading-snug">
-                    <p><strong>Banda:</strong> The Beatles</p>
-                    <p><strong>Gênero:</strong> {compactGenre}</p>
-                    <p><strong>Ano:</strong> {result.info?.year || '1971'}</p>
-                  </div>
-                  <span className="mt-1 inline-flex rounded-full border border-[#E5D6C5] bg-[#F8EBDD] px-2 py-0.5 text-[0.58rem] font-semibold text-[#5E4A35] whitespace-nowrap">
-                    Compositor
-                  </span>
+                  <p className="text-[1rem] text-[#2C241D] leading-none">Visões</p>
+                  <p className="text-[0.6rem] text-[#5C4E41] mt-1 line-clamp-1 leading-tight">
+                    {result.perspectives?.length || 0} pensadores
+                  </p>
                 </div>
               </div>
-            </div>
+            </button>
           </section>
 
-          <div className="h-px w-full bg-[#D8C9B8]" />
+          <div className="h-px w-full bg-[#D8C9B8] mt-2" />
         </div>
 
-        <section className="flex-1 min-h-0 rounded-[1.15rem] border border-[#DCCBB7] bg-[#EEE7DC] p-2 overflow-hidden">
+        <section className="flex-1 min-h-0 rounded-[1.15rem] border border-[#DCCBB7] bg-[#EEE7DC] p-2 overflow-hidden mt-1">
           {!isSectionOpen ? (
             <div className="h-full grid grid-cols-2 gap-1.5 content-start">
               {sections.map((section) => {
@@ -183,10 +218,10 @@ const MusicResultScreen: React.FC<MusicResultScreenProps> = ({ result, title, on
                   <button
                     key={section.id}
                     type="button"
-                    aria-label={`Selecionar seção ${section.title}`}
                     onClick={() => {
                       setSelectedSectionId(section.id);
                       setIsSectionOpen(true);
+                      setSelectedThinkerIndex(null);
                     }}
                     className={`h-[58px] rounded-[0.95rem] border bg-[#FFFDF8] p-1.5 text-left transition-colors ${section.fullWidth ? 'col-span-2' : ''} ${isActive ? 'border-[#C8871A] ring-1 ring-[#C8871A]/35' : 'border-[#E4D4C1]'}`}
                   >
@@ -206,12 +241,175 @@ const MusicResultScreen: React.FC<MusicResultScreenProps> = ({ result, title, on
                 );
               })}
             </div>
+            ) : selectedSectionId === 'visoes' ? (
+            <div className="h-full min-h-0 rounded-[0.95rem] border border-[#DCCBB7] bg-[#FFFDF8] p-2 flex flex-col">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <button
+                  onClick={() => selectedThinkerIndex !== null ? setSelectedThinkerIndex(null) : setIsSectionOpen(false)}
+                  className="inline-flex h-7 items-center gap-1 rounded-full border border-[#E5D6C5] bg-[#FFF8EC] px-2 text-[0.62rem] font-semibold text-[#5E4A35]"
+                >
+                  <ArrowLeft size={12} />
+                  Voltar
+                </button>
+                <div className="flex items-center gap-1.5 text-[#9E650F]">
+                  <Landmark size={11} strokeWidth={1.9} />
+                  <span className="text-[0.58rem] font-bold uppercase tracking-[0.08em]">{selectedThinkerIndex !== null ? 'Análise Detalhada' : '10 Visões Exegéticas'}</span>
+                </div>
+              </div>
+
+              {selectedThinkerIndex === null ? (
+                <div className="flex-1 overflow-y-auto pr-0.5 custom-scrollbar">
+                  <div className="grid grid-cols-2 gap-3">
+                    {result.perspectives?.map((p, idx) => {
+                      const portraitMap: Record<string, string> = {
+                        'Paulo': '/portraits/paulo.png',
+                        'Paulo de Tarso': '/portraits/paulo.png',
+                        'Salomão': '/portraits/salomao.png',
+                        'Dostoiévski': '/portraits/dostoievski.png',
+                        'Freud': '/portraits/freud.png',
+                        'Maquiavel': '/portraits/maquiavel.png',
+                        'Sócrates': '/portraits/socrates.png',
+                        'Jung': '/portraits/jung.png',
+                        'Nietzsche': '/portraits/nietzsche.png',
+                        'Sartre': '/portraits/sartre.png',
+                        'Frankl': '/portraits/frankl.png',
+                      };
+
+                      const axisMap: Record<string, string> = {
+                        'Paulo': 'Caridade Universal e Transformação.',
+                        'Paulo de Tarso': 'Caridade Universal e Transformação.',
+                        'Salomão': 'Sabedoria, Justiça e Prosperidade.',
+                        'Dostoiévski': 'Liberdade, Sofrimento e Redenção.',
+                        'Freud': 'Sublimação, Ilusão e Inconsciente.',
+                        'Maquiavel': 'Realismo Político, Poder e Estratégia.',
+                        'Sócrates': 'Conhecimento, Autoconhecimento e Virtude.',
+                        'Jung': 'Arquétipos, Inconsciência Coletiva e Individuação.',
+                        'Nietzsche': 'Vontade de Potência, Transvaloração e Superação.',
+                        'Sartre': 'Existencialismo, Liberdade e Responsabilidade.',
+                        'Frankl': 'Busca por Sentido, Resiliência e Realização Pessoal.',
+                      };
+
+                      const portraitUrl = portraitMap[p.name] || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=F5E6D3&color=8A6E4B&bold=true&font-size=0.33`;
+                      const axisText = axisMap[p.name] || p.subtitle || 'Visão Exegética';
+
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => setSelectedThinkerIndex(idx)}
+                          className="flex items-center gap-3 rounded-[1.25rem] border border-[#EADBC8] bg-white p-2.5 text-left shadow-sm transition-all active:scale-[0.97] hover:bg-[#FFFBF5] h-[72px]"
+                        >
+                          <div className="h-12 w-12 flex-none rounded-xl bg-[#F5E6D3] overflow-hidden shadow-sm">
+                            <img 
+                              src={portraitUrl} 
+                              alt={p.name} 
+                              className="h-full w-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=F5E6D3&color=8A6E4B&bold=true&font-size=0.33`;
+                              }}
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-1">
+                              <h5 className="serif font-bold text-[0.9rem] text-[#1F1A17] truncate leading-tight">{p.name}</h5>
+                              <ChevronDown size={14} className="-rotate-90 text-[#C1B09F] flex-none" />
+                            </div>
+                            <p className="text-[0.62rem] text-[#6F6258] leading-snug line-clamp-2 mt-1 italic">{axisText}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 flex flex-col min-h-0">
+                  <div className="mb-3 flex items-center gap-3">
+                    <div className="h-14 w-14 rounded-xl bg-[#F5E6D3] overflow-hidden shadow-md ring-2 ring-white">
+                       <img 
+                            src={(() => {
+                              const portraitMap: Record<string, string> = {
+                                'Paulo': '/portraits/paulo.png',
+                                'Paulo de Tarso': '/portraits/paulo.png',
+                                'Salomão': '/portraits/salomao.png',
+                                'Dostoiévski': '/portraits/dostoievski.png',
+                                'Freud': '/portraits/freud.png',
+                                'Maquiavel': '/portraits/maquiavel.png',
+                                'Sócrates': '/portraits/socrates.png',
+                                'Jung': '/portraits/jung.png',
+                                'Nietzsche': '/portraits/nietzsche.png',
+                                'Sartre': '/portraits/sartre.png',
+                                'Frankl': '/portraits/frankl.png',
+                              };
+                              const thinker = result.perspectives?.[selectedThinkerIndex];
+                              if (!thinker) return `https://ui-avatars.com/api/?background=F5E6D3&color=8A6E4B&bold=true`;
+                              return portraitMap[thinker.name] || `https://ui-avatars.com/api/?name=${encodeURIComponent(thinker.name)}&background=F5E6D3&color=8A6E4B&bold=true&font-size=0.33`;
+                            })()} 
+                            alt="Pensador" 
+                            className="h-full w-full object-cover"
+                        />
+                    </div>
+                    <div>
+                      <h4 className="serif text-[1.4rem] leading-none text-[#1F1A17]">{result.perspectives?.[selectedThinkerIndex]?.name || 'Pensador'}</h4>
+                      <p className="text-[0.7rem] font-bold text-[#9E650F] uppercase mt-1 tracking-[0.12em]">{result.perspectives?.[selectedThinkerIndex]?.subtitle || 'Visão Exegética'}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto rounded-[1.4rem] border border-[#EADBC8] bg-[#FFFDF8] p-4 shadow-inner space-y-5 custom-scrollbar">
+                    <div className="relative">
+                      <span className="float-left text-[3.8rem] leading-[0.8] font-serif text-[#9E650F] mr-2 mt-1 select-none">
+                        {(result.perspectives?.[selectedThinkerIndex]?.intro || ' ').charAt(0)}
+                      </span>
+                      <p className="text-[0.88rem] leading-relaxed text-[#3A2D1F]">
+                        {(result.perspectives?.[selectedThinkerIndex]?.intro || ' ').slice(1)}
+                      </p>
+                    </div>
+
+                    <div className="h-px w-full bg-[#EADBC8]/60" />
+
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 text-[#9E650F]">
+                          <BookOpen size={15} strokeWidth={2} />
+                          <h6 className="text-[0.65rem] font-bold uppercase tracking-wider">Interpretação</h6>
+                        </div>
+                        <p className="text-[0.82rem] leading-relaxed text-[#4A3F35]">{result.perspectives?.[selectedThinkerIndex]?.interpretation || result.perspectives?.[selectedThinkerIndex]?.commentary || 'Análise indisponível.'}</p>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 text-[#9E650F]">
+                          <Star size={15} strokeWidth={2} />
+                          <h6 className="text-[0.65rem] font-bold uppercase tracking-wider">Significado</h6>
+                        </div>
+                        <p className="text-[0.82rem] leading-relaxed text-[#4A3F35]">{result.perspectives?.[selectedThinkerIndex]?.meaning || 'Significado em processamento.'}</p>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 text-[#9E650F]">
+                          <Zap size={15} strokeWidth={2} />
+                          <h6 className="text-[0.65rem] font-bold uppercase tracking-wider">Aplicação</h6>
+                        </div>
+                        <p className="text-[0.82rem] leading-relaxed text-[#4A3F35]">{result.perspectives?.[selectedThinkerIndex]?.application || 'Aplicação prática em processamento.'}</p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl bg-[#F8F1E5] p-4 border-l-4 border-[#9E650F] shadow-sm italic relative overflow-hidden">
+                      <p className="text-[0.95rem] leading-relaxed text-[#2C241D] relative z-10">
+                        "{result.perspectives?.[selectedThinkerIndex]?.impactPhrase || result.perspectives?.[selectedThinkerIndex]?.quote || 'Reflexão em processamento...'}"
+                      </p>
+                      {result.perspectives?.[selectedThinkerIndex]?.source && (
+                        <p className="mt-2 text-[0.75rem] font-bold text-[#9E650F] not-italic relative z-10">
+                          {result.perspectives?.[selectedThinkerIndex]?.source}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           ) : (
             <div className="h-full min-h-0 rounded-[0.95rem] border border-[#DCCBB7] bg-[#FFFDF8] p-2 flex flex-col">
               <div className="mb-1 flex items-center justify-between gap-2">
                 <button
                   type="button"
-                  aria-label="Voltar para lista de seções"
                   onClick={() => setIsSectionOpen(false)}
                   className="inline-flex h-7 items-center gap-1 rounded-full border border-[#E5D6C5] bg-[#FFF8EC] px-2 text-[0.62rem] font-semibold text-[#5E4A35]"
                 >
@@ -248,4 +446,3 @@ const MusicResultScreen: React.FC<MusicResultScreenProps> = ({ result, title, on
 };
 
 export default MusicResultScreen;
-
