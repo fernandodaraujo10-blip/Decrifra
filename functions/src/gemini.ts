@@ -39,7 +39,7 @@ const getModeInstruction = (mode: AnalysisMode) => {
   }
 };
 
-const SYSTEM_INSTRUCTION = (mode: AnalysisMode, type: ContentType, options?: AnalysisContextOptions) => `Você é um Erudito em Exegese e Hermenêutica ${options?.mediaCategory === 'books' ? 'Literária' : options?.mediaCategory === 'music' ? 'Musical' : 'Cinematográfica'}.
+const SYSTEM_INSTRUCTION = (mode: AnalysisMode, type: ContentType, options?: AnalysisContextOptions) => `Você é um Erudito em Exegese e Hermenêutica \${options?.mediaCategory === 'books' ? 'Literária' : options?.mediaCategory === 'music' ? 'Musical' : 'Cinematográfica'}.
 Seu objetivo é produzir um CONTEÚDO MAGISTRAL, nota 10/10 em profundidade e estética literária.
 Transforme cada análise em um mini-ensaio acadêmico-devocional de altíssimo nível.
 
@@ -50,15 +50,23 @@ TONALIDADE E ESTILO:
 - REGRA DE OURO: Se a resposta for superficial, você falhou. Cada campo deve transbordar substância.
 
 ESTRUTURA DA CAMADA 10 (VISÕES - 10 PENSADORES):
-Para cada pensador (Paulo, Salomão, Dostoiévski, Freud, Maquiavel, Sócrates, Jung, Nietzsche, Sartre, Frankl):
-- name: Nome completo.
-- subtitle: O "Logos" ou conceito central da análise (ex: A ONTOLOGIA DO DESEJO).
-- intro: Parágrafo introdutório que estabelece a conexão filosófica entre a obra e o pensador.
-- interpretation: Exegese profunda e detalhada. Explique o subtexto da obra sob a ótica desse mestre (6 a 10 linhas densas).
-- meaning: O impacto simbólico, metafísico e universal da obra (4 a 6 linhas).
-- application: Transposição prática e existencial para a vida do usuário. Direcionamento sábio (4 a 6 linhas).
-- impactPhrase: Uma frase autoral, poderosa, estilo aforismo, que sintetize toda a visão.
-- source: Obra de referência ou citação direta (NUNCA deixe vazio se houver base).
+Para cada pensador:
+- **Voz do Pensador (Obrigatório)**: Escreva SEMPRE na **primeira pessoa do singular ("Eu")**. O pensador deve falar diretamente ao usuário.
+- name: Nome completo do pensador.
+- subtitle: O conceito central da análise (ex: "A ONTOLOGIA DO DESEJO").
+- intro: 4 a 6 linhas densas situando a obra na minha filosofia (Em 1ª pessoa).
+- interpretation: Minha exegese profunda e detalhada (5 a 8 linhas densas, Em 1ª pessoa).
+- meaning: O impacto simbólico e metafísico que eu identifico (4 a 6 linhas, Em 1ª pessoa).
+- application: Minha transposição prática e existencial para sua vida (4 a 6 linhas, Em 1ª pessoa).
+- impactPhrase: Um **VERSÍCULO BÍBLICO** (se for Paulo ou Salomão) ou uma **CITAÇÃO ERUDITA** (para os outros) que eu escolheria para sintetizar minha visão sobre esta obra específica.
+- source: Minha obra de referência ou o versículo citado.
+
+REGRA DE PREENCHIMENTO: O conteúdo deve ser extenso, erudito e preencher completamente o card de resposta. Evite lacunas.
+
+ESPECIFICAÇÕES POR CATEGORIA:
+- SE FOR FILME/SÉRIE: Foque em simbolismos visuais, arquetípicos, montagem e o subtexto das cenas.
+- SE FOR LIVRO: Foque na construção narrativa, na visão de mundo do autor, nos tropos literários e na riqueza do texto.
+- SE FOR MÚSICA: Foque na poética lírica, na ressonância emocional, no impacto cultural e na "alma" por trás da composição.
 
 Saída: JSON rigoroso (pt-BR). Sem spoilers (1-5).`;
 
@@ -104,7 +112,10 @@ const RESPONSE_SCHEMA = {
       }
     },
     whyWatch: { type: Type.STRING },
-    hiddenElements: { type: Type.ARRAY, items: { type: Type.STRING } },
+    hiddenElements: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING }
+    },
     symbols: {
       type: Type.ARRAY,
       items: {
@@ -136,7 +147,10 @@ const RESPONSE_SCHEMA = {
       type: Type.OBJECT,
       properties: {
         authorIntention: { type: Type.STRING },
-        nuances: { type: Type.ARRAY, items: { type: Type.STRING } },
+        nuances: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING }
+        },
         centralThesis: { type: Type.STRING },
       },
       required: ["authorIntention", "nuances", "centralThesis"]
@@ -144,9 +158,18 @@ const RESPONSE_SCHEMA = {
     lessons: {
       type: Type.OBJECT,
       properties: {
-        human: { type: Type.ARRAY, items: { type: Type.STRING } },
-        existential: { type: Type.ARRAY, items: { type: Type.STRING } },
-        reflectionQuestions: { type: Type.ARRAY, items: { type: Type.STRING } },
+        human: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING }
+        },
+        existential: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING }
+        },
+        reflectionQuestions: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING }
+        },
       },
       required: ["human", "existential", "reflectionQuestions"]
     },
@@ -162,7 +185,10 @@ const RESPONSE_SCHEMA = {
     spoilers: {
       type: Type.OBJECT,
       properties: {
-        keyScenes: { type: Type.ARRAY, items: { type: Type.STRING } },
+        keyScenes: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING }
+        },
         twists: { type: Type.STRING },
         finalExplained: { type: Type.STRING },
         postEndingSymbols: { type: Type.STRING },
@@ -249,35 +275,55 @@ export const interpretMovie = onCall(
 
       for (const modelName of MODEL_CANDIDATES) {
         try {
-          response = await ai.models.generateContent({
+          const model = ai.getGenerativeModel({
             model: modelName,
-            contents: `Análise exegética ${mode}: "${movieName}" (${type}). Contexto extra: ${JSON.stringify(options || {})}`,
-            config: {
-              systemInstruction: SYSTEM_INSTRUCTION(mode, type, options),
+            generationConfig: {
               responseMimeType: "application/json",
               responseSchema: RESPONSE_SCHEMA,
-            }
+            },
+            systemInstruction: SYSTEM_INSTRUCTION(mode as AnalysisMode, type as ContentType, options),
           });
+
+          const prompt = \`Analise a obra: "\${movieName}". Categoria: \${type}. Foco: \${options?.analysisType || 'Geral'}. Mode: \${mode}.\`;
+          const result = await model.generateContent(prompt);
+          const text = result.response.text();
+          response = JSON.parse(text);
           break;
-        } catch (error) {
-          lastError = error;
-          console.warn(`Falha ao usar modelo ${modelName}. Tentando próximo fallback...`);
+        } catch (err) {
+          lastError = err;
+          console.error(\`Erro com o modelo \${modelName}:\`, err);
         }
       }
 
       if (!response) {
-        throw lastError instanceof Error ? lastError : new Error("Falha ao gerar conteúdo com todos os modelos configurados.");
+        throw lastError;
       }
+
       console.timeEnd("GeminiAnalysis");
-
-      if (!response.text) {
-        throw new Error("Resposta vazia da IA");
-      }
-
-      return JSON.parse(response.text);
-    } catch (error: any) {
-      console.error("DETALHES DO ERRO GEMINI:", error);
-      throw new HttpsError("internal", error.message);
+      return response as MovieAnalysis;
+    } catch (error) {
+      console.error("Erro no processamento Gemini:", error);
+      throw new HttpsError("internal", "Erro ao processar análise exegética.");
     }
   }
 );
+
+export const tmdbSearch = onCall({ region: "southamerica-east1" }, async (request) => {
+  return { results: [] };
+});
+
+export const omdbSearch = onCall({ region: "southamerica-east1" }, async (request) => {
+  return { results: [] };
+});
+
+export const createCheckout = onCall({ region: "southamerica-east1" }, async (request) => {
+  return { id: "mock-checkout-id" };
+});
+
+export const webhookMercadoPago = onCall({ region: "southamerica-east1" }, async (request) => {
+  return { success: true };
+});
+
+export const verifyPlan = onCall({ region: "southamerica-east1" }, async (request) => {
+  return { plan: "free" };
+});

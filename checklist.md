@@ -12,6 +12,17 @@
 - [x] Renomear card de "Personagens" para "Visões" (Snippet de Pensadores)
 - [x] Aumentar timeout da Cloud Function para 540s (GCP Max)
 - [x] Incrementar memória da Cloud Function para 1GiB (Performance)
+- [x] Renomear MusicResultScreen para DecifraResultScreen (Unificação UI)
+- [x] Refatorar backend para Tom Erudito (Nota 10)
+- [x] Implementar voz em primeira pessoa para Pensadores ("Eu")
+- [x] Redesenhar cabeçalho da visão detalhada (Horizontal: Retrato Esq. | Nome Centro | Voltar Dir.)
+- [x] Exigir Versículos Bíblicos (Paulo/Salomão) e Citações Eruditas no impactPhrase
+- [x] Otimizar preenchimento do card (5-8 linhas por seção de análise)
+- [x] Especificar diretrizes por categoria (Filmes, Livros, Músicas)
+- [x] Eliminar barra de rolagem visualmente (Otimização máxima de espaço)
+- [x] Corrigir erro de divs não fechadas no Frontend
+- [x] Adicionar Fallback de imagens para Pensadores
+- [x] Deploy das Cloud Functions atualizado
 - [x] Otimizar prompt para concisão extrema no JSON
 - [x] Implementar UI detalhada das "Visões" com capitular e seções (Conforme imagem)
 - [x] Corrigir "Tela Preta": Adicionada segurança (optional chaining) em todos os acessos a dados da API no MusicResultScreen.

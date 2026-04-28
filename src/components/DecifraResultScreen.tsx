@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   ArrowLeft,
   BookOpen,
@@ -30,6 +30,7 @@ interface MusicResultScreenProps {
   onNewSearch: () => void;
   bannerImage: string;
   artistImage: string;
+  mediaType?: 'movie' | 'book' | 'music';
 }
 
 const makeSnippet = (text?: string, fallback = 'Conteúdo indisponível no momento.') => {
@@ -38,11 +39,57 @@ const makeSnippet = (text?: string, fallback = 'Conteúdo indisponível no momen
   return normalized.length > 230 ? `${normalized.slice(0, 227)}...` : normalized;
 };
 
-const MusicResultScreen: React.FC<MusicResultScreenProps> = ({ result, title, onNewSearch, bannerImage, artistImage }) => {
+const DecifraResultScreen: React.FC<MusicResultScreenProps> = ({ result, title, onNewSearch, bannerImage, artistImage }) => {
   const [topSectionId, setTopSectionId] = useState<string>('resumo');
   const [selectedSectionId, setSelectedSectionId] = useState<string>('essencia');
   const [isSectionOpen, setIsSectionOpen] = useState<boolean>(false);
   const [selectedThinkerIndex, setSelectedThinkerIndex] = useState<number | null>(null);
+  
+  const [dynamicImage, setDynamicImage] = useState<string | null>(null);
+  const [imageLoading, setImageLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    setImageLoading(true);
+
+    const loadDynamicImage = async () => {
+      try {
+        // Detect mediaType if not passed explicitly, or use passed type
+        const typeStr = result.info?.genre?.toLowerCase() || '';
+        let detectedType = mediaType;
+        if (!detectedType) {
+          if (typeStr.includes('music') || typeStr.includes('rock') || typeStr.includes('pop')) detectedType = 'music';
+          else if (result.info?.director || typeStr.includes('drama') || typeStr.includes('sci-fi')) detectedType = 'movie';
+          else detectedType = 'book';
+        }
+
+        const { fetchDynamicImage, getCachedImage, setCachedImage } = await import('../../core/image-search');
+        
+        const cached = getCachedImage(title, detectedType!);
+        if (cached) {
+          if (isMounted) {
+            setDynamicImage(cached);
+            setImageLoading(false);
+          }
+          return;
+        }
+
+        const url = await fetchDynamicImage(title, detectedType!);
+        if (url && isMounted) {
+          setDynamicImage(url);
+          setCachedImage(title, detectedType!, url);
+        }
+      } catch (err) {
+        console.warn('Failed to load dynamic image', err);
+      } finally {
+        if (isMounted) setImageLoading(false);
+      }
+    };
+
+    loadDynamicImage();
+
+    return () => { isMounted = false; };
+  }, [title, mediaType, result]);
 
   const compactGenre = useMemo(() => {
     const raw = (result.info?.genre || 'Rock/Pop').trim();
@@ -144,8 +191,18 @@ const MusicResultScreen: React.FC<MusicResultScreenProps> = ({ result, title, on
               </p>
             </div>
             
-            <div className="flex-1 min-w-[115px] h-[130px] rounded-[1.25rem] overflow-hidden border border-[#E4D4C1] shadow-md">
-              <img src={artistImage} alt="Poster" className="h-full w-full object-cover bg-[#E9DFD2]" />
+            <div className="flex-1 min-w-[115px] h-[130px] rounded-[1.25rem] overflow-hidden border border-[#E4D4C1] shadow-md relative bg-[#E9DFD2]">
+              {imageLoading && (
+                <div className="absolute inset-0 bg-[#E9DFD2] animate-pulse flex items-center justify-center">
+                  <Sparkles size={24} className="text-[#C1B09F] opacity-50" />
+                </div>
+              )}
+              <img 
+                src={dynamicImage || artistImage} 
+                alt="Poster" 
+                className={`h-full w-full object-cover transition-opacity duration-500 ${imageLoading ? 'opacity-0' : 'opacity-100'}`} 
+                onLoad={() => setImageLoading(false)}
+              />
             </div>
           </section>
 
@@ -243,113 +300,83 @@ const MusicResultScreen: React.FC<MusicResultScreenProps> = ({ result, title, on
             </div>
             ) : selectedSectionId === 'visoes' ? (
             <div className="h-full min-h-0 rounded-[0.95rem] border border-[#DCCBB7] bg-[#FFFDF8] p-2 flex flex-col">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <button
-                  onClick={() => selectedThinkerIndex !== null ? setSelectedThinkerIndex(null) : setIsSectionOpen(false)}
-                  className="inline-flex h-7 items-center gap-1 rounded-full border border-[#E5D6C5] bg-[#FFF8EC] px-2 text-[0.62rem] font-semibold text-[#5E4A35]"
-                >
-                  <ArrowLeft size={12} />
-                  Voltar
-                </button>
-                <div className="flex items-center gap-1.5 text-[#9E650F]">
-                  <Landmark size={11} strokeWidth={1.9} />
-                  <span className="text-[0.58rem] font-bold uppercase tracking-[0.08em]">{selectedThinkerIndex !== null ? 'Análise Detalhada' : '10 Visões Exegéticas'}</span>
-                </div>
-              </div>
-
               {selectedThinkerIndex === null ? (
-                <div className="flex-1 overflow-y-auto pr-0.5 custom-scrollbar">
-                  <div className="grid grid-cols-2 gap-3">
-                    {result.perspectives?.map((p, idx) => {
-                      const portraitMap: Record<string, string> = {
-                        'Paulo': '/portraits/paulo.png',
-                        'Paulo de Tarso': '/portraits/paulo.png',
-                        'Salomão': '/portraits/salomao.png',
-                        'Dostoiévski': '/portraits/dostoievski.png',
-                        'Freud': '/portraits/freud.png',
-                        'Maquiavel': '/portraits/maquiavel.png',
-                        'Sócrates': '/portraits/socrates.png',
-                        'Jung': '/portraits/jung.png',
-                        'Nietzsche': '/portraits/nietzsche.png',
-                        'Sartre': '/portraits/sartre.png',
-                        'Frankl': '/portraits/frankl.png',
-                      };
-
-                      const axisMap: Record<string, string> = {
-                        'Paulo': 'Caridade Universal e Transformação.',
-                        'Paulo de Tarso': 'Caridade Universal e Transformação.',
-                        'Salomão': 'Sabedoria, Justiça e Prosperidade.',
-                        'Dostoiévski': 'Liberdade, Sofrimento e Redenção.',
-                        'Freud': 'Sublimação, Ilusão e Inconsciente.',
-                        'Maquiavel': 'Realismo Político, Poder e Estratégia.',
-                        'Sócrates': 'Conhecimento, Autoconhecimento e Virtude.',
-                        'Jung': 'Arquétipos, Inconsciência Coletiva e Individuação.',
-                        'Nietzsche': 'Vontade de Potência, Transvaloração e Superação.',
-                        'Sartre': 'Existencialismo, Liberdade e Responsabilidade.',
-                        'Frankl': 'Busca por Sentido, Resiliência e Realização Pessoal.',
-                      };
-
-                      const portraitUrl = portraitMap[p.name] || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=F5E6D3&color=8A6E4B&bold=true&font-size=0.33`;
-                      const axisText = axisMap[p.name] || p.subtitle || 'Visão Exegética';
-
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => setSelectedThinkerIndex(idx)}
-                          className="flex items-center gap-3 rounded-[1.25rem] border border-[#EADBC8] bg-white p-2.5 text-left shadow-sm transition-all active:scale-[0.97] hover:bg-[#FFFBF5] h-[72px]"
-                        >
-                          <div className="h-12 w-12 flex-none rounded-xl bg-[#F5E6D3] overflow-hidden shadow-sm">
-                            <img 
-                              src={portraitUrl} 
-                              alt={p.name} 
-                              className="h-full w-full object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=F5E6D3&color=8A6E4B&bold=true&font-size=0.33`;
-                              }}
-                            />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center justify-between gap-1">
-                              <h5 className="serif font-bold text-[0.9rem] text-[#1F1A17] truncate leading-tight">{p.name}</h5>
-                              <ChevronDown size={14} className="-rotate-90 text-[#C1B09F] flex-none" />
-                            </div>
-                            <p className="text-[0.62rem] text-[#6F6258] leading-snug line-clamp-2 mt-1 italic">{axisText}</p>
-                          </div>
-                        </button>
-                      );
-                    })}
+                <>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <button
+                      onClick={() => setIsSectionOpen(false)}
+                      className="inline-flex h-7 items-center gap-1 rounded-full border border-[#E5D6C5] bg-[#FFF8EC] px-2 text-[0.62rem] font-semibold text-[#5E4A35]"
+                    >
+                      <ArrowLeft size={12} />
+                      Voltar
+                    </button>
+                    <div className="flex items-center gap-1.5 text-[#9E650F]">
+                      <Landmark size={11} strokeWidth={1.9} />
+                      <span className="text-[0.58rem] font-bold uppercase tracking-[0.08em]">10 Visões Exegéticas</span>
+                    </div>
                   </div>
-                </div>
+
+                  <div className="flex-1 overflow-y-auto pr-0.5 custom-scrollbar">
+                    <div className="grid grid-cols-2 gap-3">
+                      {result.perspectives?.map((p, idx) => {
+                        // ... existing portraitMap and axisMap logic remains same inside the map
+                        const portraitMap: Record<string, string> = {
+                          'Paulo': '/portraits/paulo.png',
+                          'Paulo de Tarso': '/portraits/paulo.png',
+                          'Salomão': '/portraits/salomao.png',
+                          'Dostoiévski': '/portraits/dostoievski.png',
+                          'Freud': '/portraits/freud.png',
+                          'Maquiavel': '/portraits/maquiavel.png',
+                          'Sócrates': '/portraits/socrates.png',
+                          'Jung': '/portraits/jung.png',
+                          'Nietzsche': '/portraits/nietzsche.png',
+                          'Sartre': '/portraits/sartre.png',
+                          'Frankl': '/portraits/frankl.png',
+                        };
+                        const portraitUrl = portraitMap[p.name] || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=F5E6D3&color=8A6E4B&bold=true&font-size=0.33`;
+                        const axisMap: Record<string, string> = {
+                          'Paulo': 'Caridade Universal e Transformação.',
+                          'Paulo de Tarso': 'Caridade Universal e Transformação.',
+                          'Salomão': 'Sabedoria, Justiça e Prosperidade.',
+                          'Dostoiévski': 'Liberdade, Sofrimento e Redenção.',
+                          'Freud': 'Sublimação, Ilusão e Inconsciente.',
+                          'Maquiavel': 'Realismo Político, Poder e Estratégia.',
+                          'Sócrates': 'Conhecimento, Autoconhecimento e Virtude.',
+                          'Jung': 'Arquétipos, Inconsciência Coletiva e Individuação.',
+                          'Nietzsche': 'Vontade de Potência, Transvaloração e Superação.',
+                          'Sartre': 'Existencialismo, Liberdade e Responsabilidade.',
+                          'Frankl': 'Busca por Sentido, Resiliência e Realização Pessoal.',
+                        };
+                        const axisText = axisMap[p.name] || p.subtitle || 'Visão Exegética';
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => setSelectedThinkerIndex(idx)}
+                            className="flex items-center gap-3 rounded-[1.25rem] border border-[#EADBC8] bg-white p-2.5 text-left shadow-sm transition-all active:scale-[0.97] hover:bg-[#FFFBF5] h-[72px]"
+                          >
+                            <div className="h-12 w-12 flex-none rounded-xl bg-[#F5E6D3] overflow-hidden shadow-sm">
+                              <img src={portraitUrl} alt={p.name} className="h-full w-full object-cover" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1">
+                                <h5 className="serif font-bold text-[0.9rem] text-[#1F1A17] truncate leading-tight">{p.name}</h5>
+                                <ChevronDown size={14} className="-rotate-90 text-[#C1B09F] flex-none" />
+                              </div>
+                              <p className="text-[0.62rem] text-[#6F6258] leading-snug line-clamp-2 mt-1 italic">{axisText}</p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
               ) : (
                 <div className="flex-1 flex flex-col min-h-0">
-                  <div className="mb-3 flex items-center gap-3">
-                    <div className="h-14 w-14 rounded-xl bg-[#F5E6D3] overflow-hidden shadow-md ring-2 ring-white">
-                       <img 
-                            src={(() => {
-                              const portraitMap: Record<string, string> = {
-                                'Paulo': '/portraits/paulo.png',
-                                'Paulo de Tarso': '/portraits/paulo.png',
-                                'Salomão': '/portraits/salomao.png',
-                                'Dostoiévski': '/portraits/dostoievski.png',
-                                'Freud': '/portraits/freud.png',
-                                'Maquiavel': '/portraits/maquiavel.png',
-                                'Sócrates': '/portraits/socrates.png',
-                                'Jung': '/portraits/jung.png',
-                                'Nietzsche': '/portraits/nietzsche.png',
-                                'Sartre': '/portraits/sartre.png',
-                                'Frankl': '/portraits/frankl.png',
-                              };
-                              const thinker = result.perspectives?.[selectedThinkerIndex];
-                              if (!thinker) return `https://ui-avatars.com/api/?background=F5E6D3&color=8A6E4B&bold=true`;
-                              return portraitMap[thinker.name] || `https://ui-avatars.com/api/?name=${encodeURIComponent(thinker.name)}&background=F5E6D3&color=8A6E4B&bold=true&font-size=0.33`;
-                            })()} 
-                            alt="Pensador" 
-                            className="h-full w-full object-cover"
-                        />
-                    </div>
-                  <div className="mb-5 flex items-center gap-4 px-1">
-                    <div className="h-16 w-16 rounded-2xl bg-white p-1 shadow-lg ring-1 ring-[#EADBC8]">
-                       <div className="h-full w-full rounded-xl overflow-hidden bg-[#F5E6D3]">
+                  {/* Cabeçalho Horizontal Otimizado */}
+                  <div className="flex items-center justify-between gap-2 pt-0 pb-2">
+                    {/* Retrato à Esquerda */}
+                    <div className="h-12 w-12 rounded-xl bg-white p-0.5 shadow-md ring-1 ring-[#EADBC8] flex-none">
+                       <div className="h-full w-full rounded-lg overflow-hidden bg-[#F5E6D3]">
                         <img 
                               src={(() => {
                                 const portraitMap: Record<string, string> = {
@@ -371,84 +398,97 @@ const MusicResultScreen: React.FC<MusicResultScreenProps> = ({ result, title, on
                               })()} 
                               alt="Pensador" 
                               className="h-full w-full object-cover"
+                              onError={(e) => {
+                                const thinker = result.perspectives?.[selectedThinkerIndex];
+                                const name = thinker?.name || 'Pensador';
+                                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=F5E6D3&color=8A6E4B&bold=true&font-size=0.33`;
+                              }}
                           />
                        </div>
                     </div>
-                    <div>
-                      <h4 className="serif text-[1.6rem] leading-none text-[#1F1A17] tracking-tight">{result.perspectives?.[selectedThinkerIndex]?.name || 'Pensador'}</h4>
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="h-px w-4 bg-[#9E650F]/40" />
-                        <p className="text-[0.68rem] font-black text-[#9E650F] uppercase tracking-[0.18em]">{result.perspectives?.[selectedThinkerIndex]?.subtitle || 'Visão Exegética'}</p>
-                      </div>
-                    </div>
-                  </div>
 
-                  <div className="flex-1 overflow-y-auto rounded-[1.8rem] border border-[#EADBC8] bg-white/80 p-5 shadow-inner space-y-7 custom-scrollbar backdrop-blur-sm">
-                    <div className="relative">
-                      <span className="float-left text-[4.2rem] leading-[0.7] font-serif text-[#9E650F] mr-3 mt-2 select-none opacity-90">
-                        {(result.perspectives?.[selectedThinkerIndex]?.intro || ' ').charAt(0)}
-                      </span>
-                      <p className="text-[0.95rem] leading-[1.6] text-[#3A2D1F] font-medium text-justify">
-                        {(result.perspectives?.[selectedThinkerIndex]?.intro || ' ').slice(1)}
+                    {/* Nome e Descrição Centralizados */}
+                    <div className="text-center flex-1 px-2 min-w-0">
+                      <h4 className="serif text-[1.15rem] leading-none text-[#1F1A17] tracking-tight mb-0.5 truncate">
+                        {result.perspectives?.[selectedThinkerIndex]?.name || 'Pensador'}
+                      </h4>
+                      <p className="text-[0.52rem] font-bold text-[#9E650F] uppercase tracking-[0.08em] line-clamp-1">
+                        {result.perspectives?.[selectedThinkerIndex]?.subtitle || 'Visão Exegética'}
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-4 opacity-40">
-                      <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#9E650F]" />
-                      <Landmark size={14} className="text-[#9E650F]" />
-                      <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#9E650F]" />
-                    </div>
+                    {/* Botão Voltar à Direita */}
+                    <button
+                      onClick={() => setSelectedThinkerIndex(null)}
+                      className="flex-none inline-flex h-7 items-center gap-1 rounded-full border border-[#E5D6C5] bg-[#FFF8EC] px-2 text-[0.62rem] font-semibold text-[#5E4A35]"
+                    >
+                      <ArrowLeft size={12} />
+                      Voltar
+                    </button>
+                  </div>
 
-                    <div className="space-y-6">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2.5 text-[#9E650F]">
+                  <div className="flex-1 overflow-y-auto rounded-[1.4rem] border border-[#EADBC8] bg-white p-3 shadow-inner space-y-6 custom-scrollbar">
+                    {/* Seções de Análise no Topo para Acesso Rápido */}
+                    <div className="space-y-5">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 text-[#9E650F]">
                           <div className="h-5 w-5 rounded-full bg-[#9E650F]/10 flex items-center justify-center">
-                            <BookOpen size={13} strokeWidth={2.5} />
+                            <BookOpen size={12} strokeWidth={2.5} />
                           </div>
-                          <h6 className="text-[0.7rem] font-black uppercase tracking-widest">Interpretação</h6>
+                          <h6 className="text-[0.68rem] font-black uppercase tracking-widest">Interpretação</h6>
                         </div>
-                        <p className="text-[0.88rem] leading-relaxed text-[#4A3F35] pl-7 border-l border-[#9E650F]/15">
+                        <p className="text-[0.85rem] leading-[1.65] text-[#4A3F35] pl-7 border-l border-[#9E650F]/15 text-justify">
                           {result.perspectives?.[selectedThinkerIndex]?.interpretation || result.perspectives?.[selectedThinkerIndex]?.commentary || 'Análise em processamento.'}
                         </p>
                       </div>
 
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2.5 text-[#9E650F]">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 text-[#9E650F]">
                           <div className="h-5 w-5 rounded-full bg-[#9E650F]/10 flex items-center justify-center">
-                            <Star size={13} strokeWidth={2.5} />
+                            <Star size={12} strokeWidth={2.5} />
                           </div>
-                          <h6 className="text-[0.7rem] font-black uppercase tracking-widest">Significado</h6>
+                          <h6 className="text-[0.68rem] font-black uppercase tracking-widest">Significado</h6>
                         </div>
-                        <p className="text-[0.88rem] leading-relaxed text-[#4A3F35] pl-7 border-l border-[#9E650F]/15">
+                        <p className="text-[0.85rem] leading-[1.65] text-[#4A3F35] pl-7 border-l border-[#9E650F]/15 text-justify">
                           {result.perspectives?.[selectedThinkerIndex]?.meaning || 'O impacto simbólico está sendo processado para esta obra.'}
                         </p>
                       </div>
 
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2.5 text-[#9E650F]">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 text-[#9E650F]">
                           <div className="h-5 w-5 rounded-full bg-[#9E650F]/10 flex items-center justify-center">
-                            <Zap size={13} strokeWidth={2.5} />
+                            <Zap size={12} strokeWidth={2.5} />
                           </div>
-                          <h6 className="text-[0.7rem] font-black uppercase tracking-widest">Aplicação</h6>
+                          <h6 className="text-[0.68rem] font-black uppercase tracking-widest">Aplicação</h6>
                         </div>
-                        <p className="text-[0.88rem] leading-relaxed text-[#4A3F35] pl-7 border-l border-[#9E650F]/15">
+                        <p className="text-[0.85rem] leading-[1.65] text-[#4A3F35] pl-7 border-l border-[#9E650F]/15 text-justify">
                           {result.perspectives?.[selectedThinkerIndex]?.application || 'A aplicação prática está sendo delineada para sua reflexão.'}
                         </p>
                       </div>
                     </div>
 
-                    <div className="rounded-[1.6rem] bg-gradient-to-br from-[#FDF8F1] to-[#F8F1E5] p-6 border border-[#EADBC8] shadow-sm relative overflow-hidden group">
+                    {/* Texto Introdutório/Ensaio */}
+                    <div className="relative pt-2 border-t border-[#EADBC8]/30">
+                      <span className="float-left text-[3.5rem] leading-[0.7] font-serif text-[#9E650F] mr-3 mt-1 select-none opacity-80">
+                        {(result.perspectives?.[selectedThinkerIndex]?.intro || ' ').charAt(0)}
+                      </span>
+                      <p className="text-[0.88rem] leading-[1.5] text-[#3A2D1F] font-medium text-justify">
+                        {(result.perspectives?.[selectedThinkerIndex]?.intro || ' ').slice(1)}
+                      </p>
+                    </div>
+
+                    <div className="rounded-[1.2rem] bg-gradient-to-br from-[#FDF8F1] to-[#F8F1E5] p-3 border border-[#EADBC8] shadow-sm relative overflow-hidden group">
                       <div className="absolute -top-4 -right-4 opacity-5 group-hover:scale-110 transition-transform duration-700">
-                         <Landmark size={120} />
+                         <Landmark size={80} />
                       </div>
                       <div className="relative z-10">
-                        <p className="serif text-[1.2rem] leading-snug text-[#2C241D] text-center italic font-medium">
+                        <p className="serif text-[1.05rem] leading-snug text-[#2C241D] text-center italic font-medium">
                           “{result.perspectives?.[selectedThinkerIndex]?.impactPhrase || result.perspectives?.[selectedThinkerIndex]?.quote || 'A sabedoria reside na busca constante pelo sentido.'}”
                         </p>
                         {result.perspectives?.[selectedThinkerIndex]?.source && (
-                          <div className="mt-4 flex flex-col items-center">
-                            <div className="h-px w-8 bg-[#9E650F]/30 mb-2" />
-                            <p className="text-[0.7rem] font-bold text-[#9E650F] uppercase tracking-tighter">
+                          <div className="mt-2 flex flex-col items-center">
+                            <div className="h-px w-6 bg-[#9E650F]/30 mb-1" />
+                            <p className="text-[0.62rem] font-bold text-[#9E650F] uppercase tracking-tighter">
                               {result.perspectives?.[selectedThinkerIndex]?.source}
                             </p>
                           </div>
@@ -499,4 +539,4 @@ const MusicResultScreen: React.FC<MusicResultScreenProps> = ({ result, title, on
   );
 };
 
-export default MusicResultScreen;
+export default DecifraResultScreen;

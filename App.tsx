@@ -37,7 +37,7 @@ import { AnalysisMode, ContentType, interpretMovie } from './geminiService';
 import { MovieAnalysis } from './types';
 import { runUnifiedSearch } from './src/core/search-engine';
 import { UnifiedSearchResult } from './src/core/types';
-import MusicResultScreen from './src/components/MusicResultScreen';
+import DecifraResultScreen from './src/components/DecifraResultScreen';
 
 type AppTab = 'home' | 'movies_series' | 'books' | 'music' | 'store' | 'settings';
 type UserPlan = 'free' | 'pro' | 'premium';
@@ -1198,12 +1198,13 @@ const App: React.FC = () => {
         </section>
       )}
       {musicResult && (
-        <MusicResultScreen
+        <DecifraResultScreen
           result={musicResult}
           title={musicSearchType === 'track' ? musicResult.info.originalTitle : query}
           onNewSearch={() => setMusicResult(null)}
           bannerImage={MUSIC_HERO_URL}
           artistImage={PREMIUM_AVATAR_URL}
+          mediaType="music"
         />
       )}
       {!musicResult && <CardsSection title="Destaques de hoje" onSelect={(id) => {
@@ -1304,12 +1305,13 @@ const App: React.FC = () => {
         </section>
       )}
       {moviesResult && (
-        <MusicResultScreen
+        <DecifraResultScreen
           result={moviesResult}
           title={moviesResult.info.originalTitle}
           onNewSearch={() => setMoviesResult(null)}
           bannerImage={MOVIES_HERO_URL}
           artistImage={PREMIUM_AVATAR_URL}
+          mediaType="movie"
         />
       )}
       {!moviesResult && (
@@ -1384,12 +1386,13 @@ const App: React.FC = () => {
         </section>
       )}
       {booksResult && (
-        <MusicResultScreen
+        <DecifraResultScreen
           result={booksResult}
           title={booksSearchType === 'book' ? booksResult.info.originalTitle : booksQuery}
           onNewSearch={() => setBooksResult(null)}
           bannerImage={BOOKS_HERO_URL}
           artistImage={PREMIUM_AVATAR_URL}
+          mediaType="book"
         />
       )}
       {!booksResult && <CardsSection title="Explorar hoje" onSelect={(id) => {
