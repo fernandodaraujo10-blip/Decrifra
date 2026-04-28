@@ -3,27 +3,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { MovieAnalysis } from "./types";
 
 export type AnalysisMode = 'direto' | 'reflexivo' | 'profundo';
-export type ContentType = 'filme' | 'serie' | 'livro' | 'musica';
-export interface AnalysisContextOptions {
-  mediaCategory?: 'movies_series' | 'books' | string;
-  mediaType?: 'movie' | 'series' | string;
-  searchType?: 'book' | 'author' | string;
-  depthMode?: 'quick' | 'deep' | string;
-  query?: string;
-  mainFocus?: 'lyrics' | 'context' | 'emotion' | string;
-  chipFocus?: string;
-  spoilerMode?: boolean;
-  analysisType?: string;
-  focusChip?: string;
-  userPlan?: string;
-  userId?: string;
-}
-
-const MODEL_CANDIDATES = [
-  import.meta.env.VITE_GEMINI_MODEL || "gemini-2.5-flash",
-  "gemini-flash-latest",
-  "gemini-2.0-flash",
-];
+export type ContentType = 'filme' | 'serie' | 'livro' | 'autor' | 'musica';
 
 const getModeInstruction = (mode: AnalysisMode) => {
   switch (mode) {
@@ -37,21 +17,11 @@ const getModeInstruction = (mode: AnalysisMode) => {
   }
 };
 
-const SYSTEM_INSTRUCTION = (mode: AnalysisMode, type: ContentType, options?: AnalysisContextOptions) => `Analista sênior de exegese ${options?.mediaCategory === 'books' ? 'literária' : options?.mediaCategory === 'music' ? 'musical' : 'cinematográfica'}. Gere um JSON (pt-BR).
+const SYSTEM_INSTRUCTION = (mode: AnalysisMode, type: ContentType) => `Analista sênior de exegese cinematográfica. Gere um JSON (pt-BR).
 ${getModeInstruction(mode)}
 Camada 9 (Síntese): Obra sustenta X, revelando Y. 3 argumentos.
 Camada 10 (Visões): 10 pensadores (Paulo, Salomão, Dostoiévski, Freud, Maquiavel, Sócrates, Jung, Nietzsche, Sartre, Frankl). Nome, Eixo e Comentário.
-Regras: Sem spoilers (1-5), arquétipos em personagens, conexões reais.
-Contexto do pedido:
-- categoria: ${options?.mediaCategory || "movies_series"}
-- tipo de mídia: ${options?.mediaType || type}
-- tipo de busca (livros): ${options?.searchType || "não informado"}
-- profundidade (livros): ${options?.depthMode || "não informado"}
-- modo spoiler: ${options?.spoilerMode ? "com spoiler liberado" : "sem spoiler (evitar revelações diretas do final em camadas iniciais)"}
-- tipo de análise solicitado: ${options?.analysisType || "não informado"}
-- foco rápido: ${options?.focusChip || "nenhum"}
-- plano do usuário: ${options?.userPlan || "não informado"}
-- id do usuário: ${options?.userId || "não informado"}.`;
+Regras: Sem spoilers (1-5), arquétipos em personagens, conexões reais.`;
 
 const RESPONSE_SCHEMA = {
   type: Type.OBJECT,
@@ -218,46 +188,56 @@ const RESPONSE_SCHEMA = {
   required: ["info", "ratings", "characters", "whyWatch", "hiddenElements", "symbols", "characterConflicts", "exegesis", "lessons", "alternativeReadings", "spoilers", "deepEssay", "similarMovies", "realLifeStory", "synthesis", "perspectives"]
 };
 
-export async function interpretMovie(movieName: string, mode: AnalysisMode = 'profundo', type: ContentType = 'filme', options?: AnalysisContextOptions): Promise<MovieAnalysis> {
+export async function interpretMovie(
+  movieName: string, 
+  mode: AnalysisMode = 'profundo', 
+  type: ContentType = 'filme',
+  options: any = {}
+): Promise<MovieAnalysis> {
   try {
-    const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || "" });
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyAhvAdIYYrmf8yb13K0nBGQenNAO5XLTmo";
+    const ai = new GoogleGenAI({ apiKey });
+    
+    // Construção do prompt detalhado com base nas opções
+    let userPrompt = `Análise exegética ${mode}: "${movieName}" (${type}).`;
+    if (options.analysisType) userPrompt += `\nFoco da análise: ${options.analysisType}`;
+    if (options.focusChip) userPrompt += `\nElemento de atenção: ${options.focusChip}`;
+    if (options.spoilerMode) userPrompt += `\nMODO SPOILER ATIVADO: Pode revelar reviravoltas e o final.`;
+    if (options.depthMode) userPrompt += `\nProfundidade solicitada: ${options.depthMode}`;
+
     console.time("GeminiAnalysis");
-    let response: any = null;
-    let lastError: unknown = null;
-
-    for (const modelName of MODEL_CANDIDATES) {
-      try {
-        response = await ai.models.generateContent({
-          model: modelName,
-          contents: `Análise exegética ${mode}: "${movieName}" (${type}). Contexto extra: ${JSON.stringify(options || {})}`,
-          config: {
-            systemInstruction: SYSTEM_INSTRUCTION(mode, type, options),
-            responseMimeType: "application/json",
-            responseSchema: RESPONSE_SCHEMA,
-          }
-        });
-        break;
-      } catch (error) {
-        lastError = error;
-        console.warn(`Falha ao usar modelo ${modelName}. Tentando próximo fallback...`);
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: userPrompt }]
+        }
+      ],
+      config: {
+        systemInstruction: SYSTEM_INSTRUCTION(mode, type),
+        responseMimeType: "application/json",
+        responseSchema: RESPONSE_SCHEMA,
+        temperature: 0.7,
       }
-    }
-
-    if (!response) {
-      throw lastError instanceof Error ? lastError : new Error("Falha ao gerar conteúdo com todos os modelos configurados.");
-    }
+    });
     console.timeEnd("GeminiAnalysis");
 
     if (!response.text) {
       throw new Error("Resposta vazia da IA");
     }
 
-    return JSON.parse(response.text);
+    // Limpeza robusta do JSON (remove backticks de markdown se presentes)
+    let cleanJson = response.text.trim();
+    if (cleanJson.startsWith("```")) {
+      cleanJson = cleanJson.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    }
+
+    return JSON.parse(cleanJson);
   } catch (error) {
     console.error("DETALHES DO ERRO GEMINI:", error);
     if (error instanceof Error) {
       console.error("Mensagem:", error.message);
-      console.error("Stack:", error.stack);
     }
     throw error;
   }

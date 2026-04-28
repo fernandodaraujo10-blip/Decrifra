@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   BookOpen,
   ChevronDown,
+  ChevronRight,
   Eye,
   Grid3X3,
   Heart,
@@ -16,6 +17,70 @@ import {
   Zap,
 } from 'lucide-react';
 import { MovieAnalysis } from '../../types';
+
+// ─── Visões: filósofos / pensadores ─────────────────────────────────────────
+const VISOES_THINKERS = [
+  {
+    id: 'paulo',
+    name: 'Paulo de Tarso',
+    keywords: 'Caridade Universal e Transformação.',
+    image: '/decifra-assets/visoes-paulo-tarso.png',
+  },
+  {
+    id: 'salomao',
+    name: 'Salomão',
+    keywords: 'Sabedoria, Justiça e Prosperidade.',
+    image: '/decifra-assets/visoes-salomao.png',
+  },
+  {
+    id: 'dostoievski',
+    name: 'Dostoiévski',
+    keywords: 'Liberdade, Sofrimento e Redenção.',
+    image: '/decifra-assets/visoes-dostoievski.png',
+  },
+  {
+    id: 'freud',
+    name: 'Freud',
+    keywords: 'Sublimação, Ilusão e Inconsciente.',
+    image: '/decifra-assets/visoes-freud.png',
+  },
+  {
+    id: 'maquiavel',
+    name: 'Maquiavel',
+    keywords: 'Realismo Político, Poder e Estratégia.',
+    image: '/decifra-assets/visoes-maquiavel.png',
+  },
+  {
+    id: 'socrates',
+    name: 'Sócrates',
+    keywords: 'Conhecimento, Autoconhecimento e Virtude.',
+    image: '/decifra-assets/visoes-socrates.png',
+  },
+  {
+    id: 'jung',
+    name: 'Jung',
+    keywords: 'Arquétipos, Inconsciência Coletiva e Individuação.',
+    image: '/decifra-assets/visoes-jung.png',
+  },
+  {
+    id: 'nietzsche',
+    name: 'Nietzsche',
+    keywords: 'Vontade de Potência, Transvaloração e Superação.',
+    image: '/decifra-assets/visoes-nietzsche.png',
+  },
+  {
+    id: 'sartre',
+    name: 'Sartre',
+    keywords: 'Existencialismo, Liberdade e Responsabilidade.',
+    image: '/decifra-assets/visoes-sartre.png',
+  },
+  {
+    id: 'frankl',
+    name: 'Frankl',
+    keywords: 'Busca por Sentido, Resiliência e Realização Pessoal.',
+    image: '/decifra-assets/visoes-frankl.png',
+  },
+];
 
 type SectionItem = {
   id: string;
@@ -208,6 +273,7 @@ const MusicResultScreen: React.FC<MusicResultScreenProps> = ({ result, title, on
             </div>
           ) : (
             <div className="h-full min-h-0 rounded-[0.95rem] border border-[#DCCBB7] bg-[#FFFDF8] p-2 flex flex-col">
+              {/* ── Cabeçalho da seção aberta ── */}
               <div className="mb-1 flex items-center justify-between gap-2">
                 <button
                   type="button"
@@ -224,21 +290,52 @@ const MusicResultScreen: React.FC<MusicResultScreenProps> = ({ result, title, on
                 </div>
               </div>
 
-              <div className="mb-1 flex items-center gap-2">
+              <div className="mb-2 flex items-center gap-2">
                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#E8DCCB] bg-white text-[#B87716]">
                   <SelectedIcon size={14} strokeWidth={1.8} />
                 </span>
                 <h4 className="serif text-[0.84rem] leading-tight text-[#1F1A17]">{selected.title}</h4>
               </div>
 
-              <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 pr-0.5">
-                {detailBlocks.map((topic) => (
-                  <div key={topic.id} className="rounded-lg border border-[#EADBC8] bg-[#FFF9EF] px-2 py-1.5 shadow-[0_3px_8px_rgba(0,0,0,0.04)]">
-                    <p className="text-[0.58rem] font-bold uppercase tracking-[0.06em] text-[#9E650F]">{topic.title}</p>
-                    <p className="mt-0.5 text-[0.68rem] leading-relaxed text-[#403429]">{topic.text}</p>
+              {/* ── Conteúdo: Visões → grid de cards de pensadores ── */}
+              {selected.id === 'visoes' ? (
+                <div className="flex-1 min-h-0 overflow-y-auto pr-0.5">
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {VISOES_THINKERS.map((thinker) => (
+                      <button
+                        key={thinker.id}
+                        type="button"
+                        aria-label={`Ver visão de ${thinker.name}`}
+                        className="flex items-center gap-2 rounded-[0.85rem] border border-[#E8DCCB] bg-[#FFFDF8] p-1.5 text-left shadow-[0_2px_6px_rgba(0,0,0,0.05)] transition-all active:scale-[0.98]"
+                      >
+                        {/* Retrato */}
+                        <img
+                          src={thinker.image}
+                          alt={thinker.name}
+                          className="h-[54px] w-[54px] flex-shrink-0 rounded-[0.6rem] object-cover bg-[#E9DFD2]"
+                        />
+                        {/* Texto */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[0.72rem] font-bold leading-tight text-[#1F1A17] truncate">{thinker.name}</p>
+                          <p className="mt-0.5 text-[0.56rem] leading-snug text-[#6B5745] line-clamp-3">{thinker.keywords}</p>
+                        </div>
+                        {/* Seta */}
+                        <ChevronRight size={13} className="flex-shrink-0 text-[#C8871A]" />
+                      </button>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              ) : (
+                /* ── Conteúdo genérico para outras seções ── */
+                <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 pr-0.5">
+                  {detailBlocks.map((topic) => (
+                    <div key={topic.id} className="rounded-lg border border-[#EADBC8] bg-[#FFF9EF] px-2 py-1.5 shadow-[0_3px_8px_rgba(0,0,0,0.04)]">
+                      <p className="text-[0.58rem] font-bold uppercase tracking-[0.06em] text-[#9E650F]">{topic.title}</p>
+                      <p className="mt-0.5 text-[0.68rem] leading-relaxed text-[#403429]">{topic.text}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </section>
