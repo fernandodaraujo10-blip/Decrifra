@@ -1200,7 +1200,7 @@ const App: React.FC = () => {
       {musicResult && (
         <DecifraResultScreen
           result={musicResult}
-          title={musicSearchType === 'track' ? musicResult.info.originalTitle : query}
+          title={musicSearchType === 'track' ? musicResult?.info?.originalTitle || query : query}
           onNewSearch={() => setMusicResult(null)}
           bannerImage={MUSIC_HERO_URL}
           artistImage={PREMIUM_AVATAR_URL}
@@ -1307,7 +1307,7 @@ const App: React.FC = () => {
       {moviesResult && (
         <DecifraResultScreen
           result={moviesResult}
-          title={moviesResult.info.originalTitle}
+          title={moviesResult?.info?.originalTitle || moviesQuery}
           onNewSearch={() => setMoviesResult(null)}
           bannerImage={MOVIES_HERO_URL}
           artistImage={PREMIUM_AVATAR_URL}
@@ -1388,7 +1388,7 @@ const App: React.FC = () => {
       {booksResult && (
         <DecifraResultScreen
           result={booksResult}
-          title={booksSearchType === 'book' ? booksResult.info.originalTitle : booksQuery}
+          title={booksSearchType === 'book' ? booksResult?.info?.originalTitle || booksQuery : booksQuery}
           onNewSearch={() => setBooksResult(null)}
           bannerImage={BOOKS_HERO_URL}
           artistImage={PREMIUM_AVATAR_URL}
