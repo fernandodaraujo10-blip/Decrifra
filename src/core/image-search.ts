@@ -1,6 +1,9 @@
+import { runUnifiedSearch } from './search-engine';
+
 export type MediaType = 'movie' | 'book' | 'music';
 
 export async function fetchDynamicImage(title: string, type: MediaType): Promise<string | null> {
+  if (!title) return null;
   const query = encodeURIComponent(title);
   
   if (type === 'book') {
@@ -32,7 +35,6 @@ export async function fetchDynamicImage(title: string, type: MediaType): Promise
 
   if (type === 'movie') {
     try {
-      const { runUnifiedSearch } = await import('./search-engine');
       const results = await runUnifiedSearch(title);
       if (results && results.length > 0 && results[0].poster) {
         return results[0].poster;
@@ -49,9 +51,11 @@ export async function fetchDynamicImage(title: string, type: MediaType): Promise
 const imageCache = new Map<string, string>();
 
 export function getCachedImage(title: string, type: MediaType): string | null {
+  if (!title) return null;
   return imageCache.get(`${type}-${title.toLowerCase()}`) || null;
 }
 
 export function setCachedImage(title: string, type: MediaType, url: string) {
+  if (!title) return;
   imageCache.set(`${type}-${title.toLowerCase()}`, url);
 }

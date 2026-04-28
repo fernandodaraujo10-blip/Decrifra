@@ -14,6 +14,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { MovieAnalysis } from '../../types';
+import { fetchDynamicImage, getCachedImage, setCachedImage } from '../core/image-search';
 
 type SectionItem = {
   id: string;
@@ -62,8 +63,6 @@ const DecifraResultScreen: React.FC<MusicResultScreenProps> = ({ result, title, 
           else if (result.info?.director || typeStr.includes('drama') || typeStr.includes('sci-fi')) detectedType = 'movie';
           else detectedType = 'book';
         }
-
-        const { fetchDynamicImage, getCachedImage, setCachedImage } = await import('../core/image-search');
         
         const cached = getCachedImage(title, detectedType!);
         if (cached) {
