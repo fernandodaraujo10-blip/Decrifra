@@ -3,7 +3,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { MovieAnalysis } from "./types";
 
 export type AnalysisMode = 'direto' | 'reflexivo' | 'profundo';
-export type ContentType = 'filme' | 'serie';
+export type ContentType = 'filme' | 'serie' | 'livro' | 'musica';
 export interface AnalysisContextOptions {
   mediaCategory?: 'movies_series' | 'books' | string;
   mediaType?: 'movie' | 'series' | string;
@@ -37,7 +37,7 @@ const getModeInstruction = (mode: AnalysisMode) => {
   }
 };
 
-const SYSTEM_INSTRUCTION = (mode: AnalysisMode, type: ContentType, options?: AnalysisContextOptions) => `Analista sênior de exegese ${options?.mediaCategory === 'books' ? 'literária' : 'cinematográfica'}. Gere um JSON (pt-BR).
+const SYSTEM_INSTRUCTION = (mode: AnalysisMode, type: ContentType, options?: AnalysisContextOptions) => `Analista sênior de exegese ${options?.mediaCategory === 'books' ? 'literária' : options?.mediaCategory === 'music' ? 'musical' : 'cinematográfica'}. Gere um JSON (pt-BR).
 ${getModeInstruction(mode)}
 Camada 9 (Síntese): Obra sustenta X, revelando Y. 3 argumentos.
 Camada 10 (Visões): 10 pensadores (Paulo, Salomão, Dostoiévski, Freud, Maquiavel, Sócrates, Jung, Nietzsche, Sartre, Frankl). Nome, Eixo e Comentário.

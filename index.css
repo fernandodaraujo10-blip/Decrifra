@@ -1,1 +1,42 @@
-/* Global stylesheet entrypoint kept for build/runtime compatibility. */
+@import "tailwindcss";
+
+:root {
+  --sat: env(safe-area-inset-top);
+  --sab: env(safe-area-inset-bottom);
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #050505;
+  color: #e5e5e5;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4,
+.serif {
+  font-family: 'Crimson Pro', serif;
+}
+
+.theme-dark .mobile-shell {
+  background: #221d18 !important;
+  color: #f3ebdd;
+}
+
+.theme-dark nav {
+  background: #2a231d !important;
+  border-color: #4f4337 !important;
+}

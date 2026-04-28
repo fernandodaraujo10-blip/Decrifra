@@ -1,8 +1,43 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  BarChart2,
+  Bell,
+  BookOpen,
+  Camera,
+  ChevronRight,
+  CircleHelp,
+  Clock3,
+  Compass,
+  Eye,
+  EyeOff,
+  Film,
+  Globe,
+  Headphones,
+  Heart,
+  House,
+  Info,
+  Landmark,
+  Languages,
+  Moon,
+  Music,
+  Music2,
+  PlayCircle,
+  Plus,
+  RotateCcw,
+  Search,
+  Settings,
+  Shield,
+  ShoppingBag,
+  Sparkles,
+  TrendingUp,
+  User,
+  Users
+} from 'lucide-react';
 import { AnalysisMode, ContentType, interpretMovie } from './geminiService';
 import { MovieAnalysis } from './types';
 import { runUnifiedSearch } from './src/core/search-engine';
 import { UnifiedSearchResult } from './src/core/types';
+import MusicResultScreen from './src/components/MusicResultScreen';
 
 type AppTab = 'home' | 'movies_series' | 'books' | 'music' | 'store' | 'settings';
 type UserPlan = 'free' | 'pro' | 'premium';
@@ -19,6 +54,24 @@ type MusicAnalysisTypeOption =
   | "Contexto da canção"
   | "Interpretação geral";
 type MusicFocusChipOption = "Simbologia" | "Refrão" | "Sentimento" | "Referências";
+type MoviesResponseStyle = 'resumido' | 'reflexivo' | 'profundo';
+type MoviesSearchType = 'movie' | 'series';
+type MoviesAnalysisTypeOption =
+  | "Final explicado, símbolos e mensagem central"
+  | "Personagens e arco narrativo"
+  | "Simbolismos e temas ocultos"
+  | "Contexto, mensagem e crítica"
+  | "Interpretação geral da obra";
+type MoviesFocusChipOption = "Personagens" | "Temas" | "Contexto" | "Arco final";
+type BooksSearchType = 'book' | 'author';
+type BooksAnalysisTypeOption =
+  | "Tema central, personagens e simbolismos"
+  | "Contexto histórico e mensagem"
+  | "Camadas do texto e subtexto"
+  | "Personagens e conflitos"
+  | "Leitura geral da obra";
+type BooksDepthMode = 'quick' | 'deep';
+type BooksFocusChipOption = "Resumo" | "Personagens" | "Contexto" | "Citações";
 
 type PlanId = 'monthly' | 'quarterly' | 'semiannual' | 'annual';
 type BillingCycle = '/mês' | '/3 meses' | '/6 meses' | '/ano';
@@ -40,9 +93,29 @@ interface Plan {
   bestValue?: boolean;
 }
 
-const BRAND_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0420780722.firebasestorage.app/o/1.1-APPs-Pr%C3%B3prios%2F1-Imagens%2F1-Decrifa%2F1-Logo.webp?alt=media&token=0455b19d-23a9-4ada-a7a2-fb67a3e12c9a";
+const BRAND_LOGO_URL = "/logo.png";
+const ASSET_BASE = "/decifra-assets";
+const HOME_HERO_BANNER_URL = `${ASSET_BASE}/home-hero.png`;
+const HOME_DISCOVERY_FINAL_URL = `${ASSET_BASE}/home-final.png`;
+const HOME_DISCOVERY_CAMADAS_URL = `${ASSET_BASE}/home-camadas.png`;
+const HOME_DISCOVERY_MENSAGEM_URL = `${ASSET_BASE}/home-mensagem.png`;
+const MOVIES_HERO_URL = `${ASSET_BASE}/movies-hero.png`;
+const BOOKS_HERO_URL = `${ASSET_BASE}/books-hero.png`;
+const MUSIC_HERO_URL = `${ASSET_BASE}/music-hero.png`;
+const STORE_HERO_URL = `${ASSET_BASE}/store-hero.png`;
+const SETTINGS_HERO_URL = `${ASSET_BASE}/settings-hero.png`;
+const MOVIES_SUGGESTION_FINAL_URL = `${ASSET_BASE}/movie-final-card.png`;
+const MOVIES_SUGGESTION_SIMBOLOS_URL = `${ASSET_BASE}/movie-simbolismos-card.png`;
+const MOVIES_SUGGESTION_ARCO_URL = `${ASSET_BASE}/movie-arco-card.png`;
+const BOOKS_CARD_TEMA_URL = `${ASSET_BASE}/book-tema-card.png`;
+const BOOKS_CARD_PERSONAGENS_URL = `${ASSET_BASE}/book-personagens-card.png`;
+const BOOKS_CARD_CAMADAS_URL = `${ASSET_BASE}/book-camadas-card.png`;
+const MUSIC_CARD_MENSAGEM_URL = `${ASSET_BASE}/music-mensagem-card.png`;
+const MUSIC_CARD_SENTIMENTO_URL = `${ASSET_BASE}/music-sentimento-card.png`;
+const MUSIC_CARD_CONTEXTO_URL = `${ASSET_BASE}/music-contexto-card.png`;
+const PREMIUM_AVATAR_URL = `${ASSET_BASE}/premium-avatar.png`;
 const APP_VERSION = '1.0.0';
-const BOTTOM_NAV_HEIGHT = 72;
+const BOTTOM_NAV_HEIGHT = 66;
 
 const MUSIC_ANALYSIS_TYPES: MusicAnalysisTypeOption[] = [
   "Significado da letra e mensagem central",
@@ -66,6 +139,21 @@ const BOOKS_ANALYSIS_TYPES: BooksAnalysisTypeOption[] = [
   "Leitura geral da obra",
 ];
 
+const QUICK_SUGGESTIONS = {
+  movies: {
+    movie: ['Matrix', 'Interestelar', 'O Poderoso Chefão'],
+    series: ['Dark', 'Breaking Bad', 'Lost'],
+  },
+  books: {
+    book: ['1984', 'Dom Casmurro', 'O Hobbit'],
+    author: ['Machado de Assis', 'Tolkien', 'George Orwell'],
+  },
+  music: {
+    track: ['Bohemian Rhapsody', 'Imagine', 'Trem Bala'],
+    artist: ['Queen', 'Djavan', 'Adele'],
+  },
+};
+
 const PLANS: Plan[] = [
   { planId: 'monthly', title: 'Mensal', price: 'R$ 14,90', cycle: '/mês', billingCycle: 'monthly' },
   { planId: 'quarterly', title: 'Trimestral', price: 'R$ 37,90', cycle: '/3 meses', billingCycle: 'quarterly' },
@@ -73,52 +161,38 @@ const PLANS: Plan[] = [
   { planId: 'annual', title: 'Anual', price: 'R$ 99,90', cycle: '/ano', billingCycle: 'annual', bestValue: true },
 ];
 
-const HeaderBlock: React.FC<{ title: string; subtitle: string; accentA: string; accentB: string; vibeA: string; vibeB: string }> = ({ title, subtitle, accentA, accentB, vibeA, vibeB }) => (
-  <section className="relative rounded-[1.8rem] overflow-hidden border border-amber-500/20 p-4 sm:p-6 bg-gradient-to-br from-[#090704] via-[#1a1008] to-[#090704] shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
-    <div className="pointer-events-none absolute -top-12 -right-10 w-44 h-44 rounded-full bg-amber-500/20 blur-3xl" />
-    <div className="pointer-events-none absolute bottom-0 left-8 w-32 h-32 rounded-full bg-amber-800/20 blur-3xl" />
-    <div className="relative z-10 flex items-center gap-4">
-      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden border border-amber-500/50 shadow-lg shadow-amber-500/20 bg-black/70">
-        <img src={BRAND_LOGO_URL} alt="Logo Decifra" className="w-full h-full object-cover" />
-      </div>
-      <div>
-        <h2 className="text-[#D5A54A] text-[1.75rem] sm:text-3xl font-bold serif leading-none">Decifra</h2>
-        <p className="text-white text-[1.9rem] sm:text-[2.1rem] leading-tight font-semibold serif">{title}</p>
-        <p className="text-[#E7E2DA]/85 text-sm sm:text-base mt-1 leading-snug">{subtitle}</p>
-      </div>
-    </div>
+const HeaderBlock: React.FC<{ title: string; subtitle: string; image?: string; tall?: boolean }> = ({ title, subtitle, image, tall }) => (
+  <section className={`relative rounded-[1.55rem] overflow-hidden border border-amber-500/20 shadow-[0_12px_30px_rgba(0,0,0,0.32)] ${tall ? 'h-[154px]' : 'h-[150px]'}`}>
+    {image ? (
+      <img src={image} alt={`${title} Decifra`} className="absolute inset-0 w-full h-full object-cover" />
+    ) : (
+      <>
+        <div className="absolute inset-0 bg-gradient-to-br from-[#090704] via-[#1a1008] to-[#090704]" />
+        <div className="relative z-10 flex items-center gap-4 h-full p-5">
+          <div className="w-16 h-16 rounded-2xl overflow-hidden border border-amber-500/50 shadow-lg shadow-amber-500/20 bg-black/70">
+            <img src={BRAND_LOGO_URL} alt="Logo Decifra" className="w-full h-full object-cover" />
+          </div>
+          <div>
+            <h2 className="text-[#D5A54A] text-3xl font-bold serif leading-none">DECIFRA</h2>
+            <p className="text-white text-[2rem] leading-tight font-semibold serif">{title}</p>
+            <p className="text-[#E7E2DA]/85 text-base mt-1 leading-snug">{subtitle}</p>
+          </div>
+        </div>
+      </>
+    )}
   </section>
 );
 
-const MoviesHeroBanner: React.FC<{ onOpenSettings: () => void }> = ({ onOpenSettings }) => (
-  <section className="relative rounded-[1.8rem] overflow-hidden border border-amber-500/20 p-5 bg-gradient-to-br from-[#050403] via-[#1a1108] to-[#060402] shadow-[0_16px_40px_rgba(0,0,0,0.45)] min-h-[220px]">
-    <div className="pointer-events-none absolute -top-10 -right-8 w-40 h-40 rounded-full bg-amber-500/20 blur-3xl" />
-    <div className="pointer-events-none absolute bottom-6 right-6 w-20 h-20 rounded-full border border-amber-400/20" />
-    <div className="pointer-events-none absolute top-8 right-14 w-10 h-10 border border-amber-400/20 rotate-12" />
-    <button
-      onClick={onOpenSettings}
-      className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full border border-[#CFA14F]/50 bg-[#F6EFE2] text-[#7C5B2D] text-lg flex items-center justify-center"
-      aria-label="Abrir configurações"
-    >
-      ⚙️
-    </button>
-    <div className="relative z-10 flex items-center gap-4 pt-3">
-      <div className="w-20 h-20 rounded-2xl overflow-hidden border border-amber-500/50 shadow-lg shadow-amber-500/20 bg-black/70 flex-shrink-0">
-        <img src={BRAND_LOGO_URL} alt="Logo Decifra" className="w-full h-full object-cover" />
-      </div>
-      <div className="pr-8">
-        <h2 className="text-[#D5A54A] text-4xl leading-none font-bold serif">DECIFRA</h2>
-        <p className="text-white text-[2.2rem] leading-tight font-semibold serif">Filmes e Séries</p>
-        <p className="text-[#E7E2DA]/90 text-[1.35rem] leading-tight mt-1">Interpretação inteligente para cinema e streaming</p>
-      </div>
-    </div>
+const MoviesHeroBanner: React.FC = () => (
+  <section className="relative -mx-4 h-[156px] overflow-hidden rounded-b-[1.55rem] shadow-[0_12px_30px_rgba(0,0,0,0.34)]">
+    <img src={MOVIES_HERO_URL} alt="Decifra Filmes e Séries" className="absolute inset-0 w-full h-full object-cover" />
   </section>
 );
 
 const SegmentedToggle: React.FC<{ options: { id: string; label: string }[]; value: string; onChange: (value: string) => void }> = ({ options, value, onChange }) => (
-  <div className="grid gap-2 p-2 rounded-2xl bg-[#ECE9E4] border border-[#D9D1C6]" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+  <div className="grid gap-1.5 p-1.5 rounded-2xl bg-[#ECE9E4] border border-[#D9D1C6]" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
     {options.map((item) => (
-      <button key={item.id} onClick={() => onChange(item.id)} className={`py-3 rounded-xl text-sm font-black tracking-wide transition-all ${value === item.id ? 'bg-white border border-[#CFA14F] text-[#8D621F]' : 'text-[#9C9488]'}`}>
+      <button key={item.id} onClick={() => onChange(item.id)} className={`h-9 rounded-xl text-xs font-semibold tracking-wide transition-all flex items-center justify-center ${value === item.id ? 'bg-white border border-[#CFA14F] text-[#8D621F]' : 'text-[#9C9488]'}`}>
         {item.label}
       </button>
     ))}
@@ -130,42 +204,36 @@ const SuggestionsSection: React.FC<{ onSelect: (id: string) => void; onViewAll: 
     {
       id: 'final_explicado',
       title: 'FINAL EXPLICADO',
-      subtitle: 'Entenda o desfecho em profundidade',
-      bg: 'linear-gradient(160deg,#4d2e16 0%,#1d120a 70%)',
+      image: MOVIES_SUGGESTION_FINAL_URL,
     },
     {
       id: 'simbolismos',
       title: 'SIMBOLISMOS',
-      subtitle: 'Descubra símbolos e seus significados',
-      bg: 'linear-gradient(160deg,#5a3a1c 0%,#1a1209 75%)',
+      image: MOVIES_SUGGESTION_SIMBOLOS_URL,
     },
     {
       id: 'arco_personagens',
       title: 'ARCO DOS PERSONAGENS',
-      subtitle: 'A jornada e evolução de cada personagem',
-      bg: 'linear-gradient(160deg,#6a421c 0%,#1a1209 75%)',
+      image: MOVIES_SUGGESTION_ARCO_URL,
     },
   ];
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-2">
       <div className="flex items-center justify-between">
-        <h3 className="text-[2.2rem] serif text-[#2E241B] leading-none">Sugestões de hoje</h3>
-        <button onClick={onViewAll} className="text-[#9A6B24] text-xl serif">Ver todas ›</button>
+        <h3 className="text-[1.7rem] serif text-[#2E241B] leading-none">Sugestões de hoje</h3>
+        <button onClick={onViewAll} className="text-[#9A6B24] text-base serif">Ver todas ›</button>
       </div>
-      <div className="grid grid-cols-3 gap-2.5">
+      <div className="grid grid-cols-3 gap-3">
         {cards.map((card) => (
           <button
             key={card.id}
             onClick={() => onSelect(card.id)}
-            className="relative rounded-[1.2rem] overflow-hidden min-h-[190px] border border-[#6A4A24]/50 shadow-lg text-left"
-            style={{ backgroundImage: card.bg }}
+            className="relative w-full aspect-[1.12] rounded-2xl overflow-hidden shadow-[0_8px_18px_rgba(25,18,11,0.18)] text-left"
           >
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/30 to-black/80" />
-            <div className="absolute top-2 right-2 w-8 h-8 rounded-full border border-[#D3A34D] bg-black/45 text-white text-sm flex items-center justify-center">▶</div>
-            <div className="absolute left-2.5 right-2.5 bottom-2">
-              <p className="text-white text-[0.68rem] leading-tight serif font-semibold">{card.title}</p>
-              <p className="text-[#E9DDCC] text-[0.56rem] leading-tight mt-1">{card.subtitle}</p>
+            <img src={card.image} alt={card.title} className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute top-2 right-2 text-white/95">
+              <PlayCircle size={18} strokeWidth={1.5} />
             </div>
           </button>
         ))}
@@ -175,28 +243,13 @@ const SuggestionsSection: React.FC<{ onSelect: (id: string) => void; onViewAll: 
 };
 
 const HomeHeroBanner: React.FC<{ onOpenSettings: () => void }> = ({ onOpenSettings }) => (
-  <section className="relative h-full rounded-[1.7rem] overflow-hidden border border-amber-500/20 p-3.5 bg-gradient-to-br from-[#050403] via-[#1a1108] to-[#060402] shadow-[0_16px_40px_rgba(0,0,0,0.45)] min-h-[148px]">
-    <div className="pointer-events-none absolute -top-10 -right-8 w-40 h-40 rounded-full bg-amber-500/20 blur-3xl" />
-    <div className="pointer-events-none absolute bottom-4 right-4 text-4xl opacity-30">🎞️</div>
-    <div className="pointer-events-none absolute top-8 right-16 text-3xl opacity-25">🎧</div>
-    <div className="pointer-events-none absolute bottom-6 left-6 text-3xl opacity-20">📖</div>
+  <section className="relative h-full rounded-[1.7rem] overflow-hidden border border-amber-500/20 shadow-[0_16px_40px_rgba(0,0,0,0.45)] min-h-[148px]">
+    <img src={HOME_HERO_BANNER_URL} alt="Banner Decifra" className="absolute inset-0 w-full h-full object-cover" />
     <button
       onClick={onOpenSettings}
-      className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full border border-[#CFA14F]/50 bg-[#F6EFE2] text-[#7C5B2D] text-base flex items-center justify-center"
+      className="absolute top-2 right-2 z-10 w-11 h-11 rounded-full bg-transparent"
       aria-label="Abrir configurações"
-    >
-      ⚙️
-    </button>
-    <div className="relative z-10 flex items-center gap-2.5 pt-1.5">
-      <div className="w-[72px] h-[72px] rounded-[1.2rem] overflow-hidden border border-amber-500/50 shadow-lg shadow-amber-500/20 bg-black/70 flex-shrink-0">
-        <img src={BRAND_LOGO_URL} alt="Logo Decifra" className="w-full h-full object-cover" />
-      </div>
-      <div className="pr-7">
-        <h2 className="text-[#D5A54A] text-[2.35rem] leading-none font-bold serif">DECIFRA</h2>
-        <p className="text-white text-[0.82rem] leading-snug font-medium">Filmes, séries, músicas e livros com interpretação inteligente</p>
-        <p className="text-[#E7C272] text-[0.72rem] leading-tight mt-1.5">Revele as camadas por trás de cada obra.</p>
-      </div>
-    </div>
+    />
   </section>
 );
 
@@ -212,13 +265,30 @@ const HomeStatusCard: React.FC<{ progress: number; onStatistics: () => void; onH
     </div>
     <div className="grid grid-cols-2 border-t border-[#E5DDD2] pt-2.5">
       <button onClick={onStatistics} className="text-[#988978] text-[0.82rem] font-black flex items-center justify-center gap-1.5 border-r border-[#E5DDD2] py-1.5">
-        📊 ESTATÍSTICAS
+        <BarChart2 size={14} strokeWidth={1.5} />
+        ESTATÍSTICAS
       </button>
       <button onClick={onHistory} className="text-[#988978] text-[0.82rem] font-black flex items-center justify-center gap-1.5 py-1.5">
-        🕘 HISTÓRICO <span className="opacity-80">›</span>
+        <Clock3 size={14} strokeWidth={1.5} />
+        HISTÓRICO <span className="opacity-80">›</span>
       </button>
     </div>
   </section>
+);
+
+const QuickSuggestionsRow: React.FC<{ items: string[]; onSelect: (value: string) => void }> = ({ items, onSelect }) => (
+  <div className="flex items-center gap-2 overflow-x-auto px-1 mt-0.5 mb-0.5" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+    {items.map((item) => (
+      <button
+        key={item}
+        type="button"
+        onClick={() => onSelect(item)}
+        className="text-[13px] leading-none whitespace-nowrap rounded-full bg-transparent border-0 px-2.5 py-1 font-semibold text-[#0B2545] shadow-[0_0_0_1px_rgba(11,37,69,0.16),0_3px_8px_rgba(11,37,69,0.14)] hover:text-[#081A33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B2545]/50 focus-visible:ring-offset-1"
+      >
+        {item}
+      </button>
+    ))}
+  </div>
 );
 
 const SearchInput: React.FC<{
@@ -227,39 +297,149 @@ const SearchInput: React.FC<{
   loading: boolean;
   showSuggestions: boolean;
   suggestions: SearchSuggestionItem[];
+  showCameraButton?: boolean;
+  examples?: string[];
   onChange: (value: string) => void;
   onFocus: () => void;
   onBlur: () => void;
   onSubmit: () => void;
-  onSelectSuggestion: (title: string) => void;
-}> = ({ value, placeholder, loading, showSuggestions, suggestions, onChange, onFocus, onBlur, onSubmit, onSelectSuggestion }) => (
+  onSelectSuggestion: (value: string) => void;
+}> = ({ value, placeholder, loading, showSuggestions, suggestions, showCameraButton = false, examples, onChange, onFocus, onBlur, onSubmit, onSelectSuggestion }) => {
+  const uploadInputRef = React.useRef<HTMLInputElement>(null);
+  const cameraInputRef = React.useRef<HTMLInputElement>(null);
+  const [imagePreview, setImagePreview] = React.useState<string | null>(null);
+  const previewUrlRef = React.useRef<string | null>(null);
+  const revokePreviewUrl = React.useCallback(() => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+  }, []);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      revokePreviewUrl();
+      const url = URL.createObjectURL(e.target.files[0]);
+      previewUrlRef.current = url;
+      setImagePreview(url);
+    }
+  };
+
+  const handleClearImage = () => {
+    revokePreviewUrl();
+    setImagePreview(null);
+    if (uploadInputRef.current) uploadInputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+  };
+
+  React.useEffect(() => () => {
+    revokePreviewUrl();
+  }, [revokePreviewUrl]);
+
+  return (
   <div className="relative">
-    <div className="flex items-center gap-3 rounded-2xl border border-[#DED7CB] bg-[#F7F3ED] px-4 py-4">
-      <span className="text-xl text-[#A59684]">⌕</span>
-      <input type="text" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} onFocus={onFocus} onBlur={onBlur} onKeyDown={(e) => e.key === 'Enter' && onSubmit()} className="w-full bg-transparent text-[#3E3228] placeholder:text-[#A89D8E] outline-none text-lg" />
-      {value && <button onMouseDown={(e) => e.preventDefault()} onClick={() => onChange('')} className="text-[#A89D8E] text-xs font-bold">LIMPAR</button>}
-      {loading && <div className="w-5 h-5 border-2 border-[#CFA14F] border-t-transparent rounded-full animate-spin" />}
+    {examples && examples.length > 0 && (
+      <div className="flex gap-4 mb-2 overflow-x-auto pb-1 px-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        {examples.map(ex => (
+          <button
+            key={ex}
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => { onChange(ex); setTimeout(() => onSubmit(), 50); }}
+            className="text-[13px] font-bold text-[#1e3a8a] whitespace-nowrap hover:opacity-70 transition-opacity"
+          >
+            {ex}
+          </button>
+        ))}
+      </div>
+    )}
+    <div className="relative flex items-center w-full">
+      <Search size={16} strokeWidth={1.7} className="absolute left-3 text-[#A59684] pointer-events-none" />
+      <input
+        type="text"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        onKeyDown={(e) => e.key === 'Enter' && onSubmit()}
+        className="w-full pl-9 pr-28 h-10 rounded-xl bg-white border border-[#DED7CB] text-[#3E3228] placeholder:text-[#A89D8E] outline-none text-sm"
+      />
+      <div className="absolute right-2 flex items-center gap-1.5">
+        {value && (
+          <button
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => onChange('')}
+            className="w-6 h-6 rounded-full text-[#A89D8E] text-sm font-bold hover:bg-[#F2EEE8] transition-colors"
+            aria-label="Limpar campo"
+          >
+            ×
+          </button>
+        )}
+        {showCameraButton && (
+          <div className="flex items-center gap-1 ml-1 pr-1">
+            <button
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => cameraInputRef.current?.click()}
+              className="w-7 h-7 rounded-lg border border-[#D8CFBF] text-[#8D621F] flex items-center justify-center bg-[#FBF8F3]"
+              aria-label="Capturar imagem"
+            >
+              <Camera size={14} strokeWidth={1.8} />
+            </button>
+            <button
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => uploadInputRef.current?.click()}
+              className="w-7 h-7 rounded-lg border border-[#D8CFBF] text-[#8D621F] flex items-center justify-center bg-[#FBF8F3]"
+              aria-label="Upload imagem"
+            >
+              <Plus size={16} strokeWidth={2} />
+            </button>
+          </div>
+        )}
+        {loading && <div className="w-4 h-4 border-2 border-[#CFA14F] border-t-transparent rounded-full animate-spin" />}
+      </div>
     </div>
     {showSuggestions && suggestions.length > 0 && (
       <div className="absolute left-0 right-0 top-full mt-2 rounded-2xl border border-[#DED7CB] bg-white shadow-2xl overflow-hidden z-20">
         {suggestions.map((item) => (
           <button key={item.id} onMouseDown={(e) => e.preventDefault()} onClick={() => onSelectSuggestion(item.title)} className="w-full flex items-center gap-3 p-3 border-b border-[#F0EAE0] last:border-b-0 text-left hover:bg-[#FAF7F2] transition-colors">
-            {item.poster ? <img src={item.poster} alt={item.title} className="w-10 h-14 rounded-lg object-cover" /> : <div className="w-10 h-14 rounded-lg bg-[#EFE7DB] flex items-center justify-center text-sm">{item.kind === 'history' ? '🕘' : '🎵'}</div>}
+            {item.poster ? (
+              <img src={item.poster} alt={item.title} className="w-10 h-14 rounded-lg object-cover" />
+            ) : (
+              <div className="w-10 h-14 rounded-lg bg-[#EFE7DB] flex items-center justify-center text-[#7C6F61]">
+                {item.kind === 'history' ? <Clock3 size={14} strokeWidth={1.5} /> : <Music2 size={14} strokeWidth={1.5} />}
+              </div>
+            )}
             <div>
               <p className="text-[#332A22] text-sm font-semibold leading-tight">{item.title}</p>
-              <p className="text-[#938574] text-xs">{item.subtitle}</p>
             </div>
           </button>
         ))}
       </div>
     )}
+
+    <input type="file" accept="image/*" ref={uploadInputRef} onChange={handleFileChange} className="hidden" />
+    <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} onChange={handleFileChange} className="hidden" />
+
+    {imagePreview && (
+      <div className="flex items-center gap-3 p-2 mt-2 bg-white border border-[#DED7CB] rounded-2xl shadow-sm">
+        <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+          <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+        </div>
+        <div className="flex flex-col flex-grow overflow-hidden">
+          <span className="text-xs font-bold text-[#3E3228] truncate">Imagem anexada</span>
+        </div>
+        <button onClick={handleClearImage} className="flex items-center justify-center w-8 h-8 rounded-full bg-red-50 text-red-500 hover:bg-red-100 transition-colors flex-shrink-0 mr-1">✕</button>
+      </div>
+    )}
   </div>
-);
+  );
+};
 
 const DropdownField: React.FC<{ label: string; value: string; isOpen: boolean; onToggle: () => void; options: string[]; onSelect: (value: string) => void }> = ({ label, value, isOpen, onToggle, options, onSelect }) => (
   <div className="relative">
-    <label className="block text-[#3A2E24] text-[1.9rem] sm:text-2xl serif mb-2 leading-none">{label}</label>
-    <button onClick={onToggle} className="w-full bg-white border border-[#D8D0C4] rounded-xl px-4 py-3 text-left text-[#3D3026] text-[1.45rem] sm:text-xl serif flex items-center justify-between">
+    <label className="block text-[#3A2E24] text-sm font-semibold mb-1.5 leading-none">{label}</label>
+    <button onClick={onToggle} className="w-full bg-white border border-[#D8D0C4] rounded-xl px-4 py-2.5 text-left text-[#3D3026] text-sm font-medium flex items-center justify-between">
       <span className="truncate pr-4">{value}</span>
       <span className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}>⌄</span>
     </button>
@@ -274,169 +454,86 @@ const DropdownField: React.FC<{ label: string; value: string; isOpen: boolean; o
 );
 
 const ChipsRow: React.FC<{ chips: string[]; value: string | null; onChange: (value: string | null) => void }> = ({ chips, value, onChange }) => (
-  <div className="flex flex-wrap gap-3">
+  <div className="flex flex-wrap gap-2">
     {chips.map((chip) => (
-      <button key={chip} onClick={() => onChange(value === chip ? null : chip)} className={`px-4 py-2 rounded-full border text-[1.6rem] sm:text-lg serif transition-all ${value === chip ? 'bg-[#F3E4CA] border-[#CFA14F] text-[#8D621F]' : 'bg-[#F4F0EA] border-[#D7D0C6] text-[#60554A]'}`}>{chip}</button>
+      <button key={chip} onClick={() => onChange(value === chip ? null : chip)} className={`px-3 py-1.5 rounded-full border text-sm serif transition-all ${value === chip ? 'bg-[#F3E4CA] border-[#CFA14F] text-[#8D621F]' : 'bg-[#F4F0EA] border-[#D7D0C6] text-[#60554A]'}`}>{chip}</button>
     ))}
   </div>
 );
 
 const InterpretButton: React.FC<{ disabled: boolean; loading: boolean; onClick: () => void; label?: string }> = ({ disabled, loading, onClick, label = "INTERPRETAR AGORA" }) => (
-  <button disabled={disabled} onClick={onClick} className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#C99022] via-[#DCA63A] to-[#B87A17] text-white text-2xl serif font-semibold tracking-wide shadow-[0_12px_28px_rgba(179,123,22,0.35)] disabled:opacity-40 disabled:cursor-not-allowed">
-    {loading ? "PROCESSANDO..." : label}
+  <button disabled={disabled} onClick={onClick} className="w-full h-11 rounded-2xl bg-gradient-to-r from-[#C99022] via-[#DCA63A] to-[#B87A17] text-white text-sm font-semibold tracking-wide shadow-[0_10px_22px_rgba(179,123,22,0.32)] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+    {loading ? "PROCESSANDO..." : <><Sparkles size={16} strokeWidth={2} />{label}</>}
   </button>
 );
 
-const CardsSection: React.FC<{ title: string; cards: { id: string; title: string; subtitle: string; emoji: string }[]; onSelect: (id: string) => void }> = ({ title, cards, onSelect }) => (
-  <section className="space-y-4">
-    <h3 className="text-[2.2rem] sm:text-4xl serif text-[#2E241B] leading-none">{title}</h3>
-    <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+const CardsSection: React.FC<{ title: string; cards: { id: string; title: string; subtitle: string; image?: string; hideOverlay?: boolean }[]; onSelect: (id: string) => void }> = ({ title, cards, onSelect }) => (
+  <section className="space-y-2">
+    <h3 className="text-[1.7rem] sm:text-3xl serif text-[#2E241B] leading-none">{title}</h3>
+    <div className="grid grid-cols-3 gap-2.5">
       {cards.map((card) => (
-        <button key={card.id} onClick={() => onSelect(card.id)} className="text-left rounded-2xl sm:rounded-3xl overflow-hidden bg-gradient-to-b from-[#3A2818] to-black border border-[#6A4A24]/60 shadow-xl p-2.5 sm:p-4 min-h-[185px] sm:min-h-[180px] flex flex-col justify-end hover:-translate-y-0.5 transition-transform">
-          <p className="text-white text-[0.72rem] sm:text-2xl leading-tight mt-2 serif">{card.title}</p>
-          <p className="text-[#E3D7C7] text-[0.58rem] sm:text-base mt-1.5 sm:mt-2 leading-tight">{card.subtitle}</p>
+        <button key={card.id} onClick={() => onSelect(card.id)} className="relative text-left rounded-2xl overflow-hidden bg-gradient-to-b from-[#3A2818] to-black border border-[#6A4A24]/60 shadow-xl min-h-[96px] aspect-[1.08] flex flex-col justify-end hover:-translate-y-0.5 transition-transform">
+          {card.image && <img src={card.image} alt={card.title} className="absolute inset-0 w-full h-full object-cover" />}
+          {!card.hideOverlay && (
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-2.5 pt-12">
+              <p className="text-white text-[0.66rem] sm:text-xl leading-tight serif font-black text-center">{card.title}</p>
+              {card.subtitle && <p className="text-[#E3D7C7] text-[0.55rem] sm:text-sm mt-1 leading-tight text-center">{card.subtitle}</p>}
+            </div>
+          )}
         </button>
       ))}
     </div>
   </section>
 );
 
-const AnalysisLayers: React.FC<{ result: MovieAnalysis; showSpoilers?: boolean }> = ({ result, showSpoilers = false }) => {
-  const layerCard = "rounded-xl bg-white border border-[#E0D6C9] p-4 space-y-2";
-  const layerTitle = "text-[#8D621F] text-xs uppercase tracking-wider font-bold";
-  const text = "text-[#40352C] text-sm leading-relaxed";
-  const list = "list-disc pl-5 space-y-1 text-[#40352C] text-sm";
-
-  return (
-    <div className="space-y-3">
-      <div className={layerCard}>
-        <p className={layerTitle}>1. Essência</p>
-        <p className={text}>{result.info.synopsis}</p>
-        <p className={text}><span className="font-semibold">Por que ver:</span> {result.whyWatch}</p>
-      </div>
-
-      <div className={layerCard}>
-        <p className={layerTitle}>2. Valoração</p>
-        <ul className={list}>
-          {result.ratings.map((item, idx) => <li key={idx}><span className="font-semibold">{item.criterion} ({item.score}/10):</span> {item.explanation}</li>)}
-        </ul>
-      </div>
-
-      <div className={layerCard}>
-        <p className={layerTitle}>3. Exegese</p>
-        <p className={text}><span className="font-semibold">Tese central:</span> {result.exegesis.centralThesis}</p>
-        <p className={text}><span className="font-semibold">Intenção autoral:</span> {result.exegesis.authorIntention}</p>
-        <ul className={list}>
-          {result.exegesis.nuances.map((item, idx) => <li key={idx}>{item}</li>)}
-        </ul>
-      </div>
-
-      <div className={layerCard}>
-        <p className={layerTitle}>4. Arquétipos</p>
-        <ul className={list}>
-          {result.characters.map((item, idx) => <li key={idx}><span className="font-semibold">{item.name} ({item.dramaticFunction}):</span> {item.description}</li>)}
-        </ul>
-      </div>
-
-      <div className={layerCard}>
-        <p className={layerTitle}>5. Simbolismo</p>
-        <ul className={list}>
-          {result.symbols.map((item, idx) => <li key={idx}><span className="font-semibold">{item.name}:</span> {item.representation} ({item.occurrence})</li>)}
-        </ul>
-      </div>
-
-      <div className={layerCard}>
-        <p className={layerTitle}>6. Conflitos</p>
-        <ul className={list}>
-          {result.characterConflicts.map((item, idx) => <li key={idx}><span className="font-semibold">{item.name}:</span> desejo {item.centralDesire}; medo {item.hiddenFear}; contradição {item.internalContradiction}</li>)}
-        </ul>
-      </div>
-
-      <div className={layerCard}>
-        <p className={layerTitle}>7. Lições</p>
-        <p className="font-semibold text-[#40352C] text-sm">Humanas</p>
-        <ul className={list}>{result.lessons.human.map((item, idx) => <li key={`h-${idx}`}>{item}</li>)}</ul>
-        <p className="font-semibold text-[#40352C] text-sm mt-2">Existenciais</p>
-        <ul className={list}>{result.lessons.existential.map((item, idx) => <li key={`e-${idx}`}>{item}</li>)}</ul>
-      </div>
-
-      <div className={layerCard}>
-        <p className={layerTitle}>8. Leituras Alternativas</p>
-        <p className={text}><span className="font-semibold">Psicológica:</span> {result.alternativeReadings.psychological}</p>
-        <p className={text}><span className="font-semibold">Filosófica:</span> {result.alternativeReadings.philosophical}</p>
-        <p className={text}><span className="font-semibold">Espiritual:</span> {result.alternativeReadings.spiritual}</p>
-      </div>
-
-      <div className={layerCard}>
-        <p className={layerTitle}>9. Síntese</p>
-        <p className={text}><span className="font-semibold">Tese:</span> {result.synthesis.centralThesis}</p>
-        <ul className={list}>
-          {result.synthesis.arguments.map((item, idx) => <li key={idx}><span className="font-semibold">{item.title}:</span> {item.paragraph}</li>)}
-        </ul>
-        <p className={text}><span className="font-semibold">Conclusão:</span> {result.synthesis.conclusion}</p>
-      </div>
-
-      <div className={layerCard}>
-        <p className={layerTitle}>10. Visões</p>
-        <ul className={list}>
-          {result.perspectives.map((item, idx) => <li key={idx}><span className="font-semibold">{item.name} ({item.axis}):</span> {item.commentary}</li>)}
-        </ul>
-      </div>
-
-      {showSpoilers && (
-        <div className={layerCard}>
-          <p className={layerTitle}>Spoilers</p>
-          <p className={text}><span className="font-semibold">Final explicado:</span> {result.spoilers.finalExplained}</p>
-          <p className={text}><span className="font-semibold">Twists:</span> {result.spoilers.twists}</p>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const StoreHeader = () => <HeaderBlock title="Loja" subtitle="Escolha o plano ideal para explorar mais" accentA="🧾" accentB="🎞️" vibeA="🎧" vibeB="✨" />;
-const SettingsHeader = () => <HeaderBlock title="Configurações" subtitle="Ajuste sua experiência de leitura e descoberta" accentA="📚" accentB="🎞️" vibeA="🕯️" vibeB="⚙️" />;
+const StoreHeader = () => <HeaderBlock title="Loja" subtitle="Escolha o plano ideal para explorar mais" image={STORE_HERO_URL} tall />;
+const SettingsHeader = () => <HeaderBlock title="Configurações" subtitle="Ajuste sua experiência de leitura e descoberta" image={SETTINGS_HERO_URL} tall />;
 
 const PlanCard: React.FC<{ plan: Plan; selected: boolean; onSelect: () => void }> = ({ plan, selected, onSelect }) => (
-  <div className={`rounded-3xl border p-4 bg-white shadow-lg relative ${selected || plan.bestValue ? 'border-amber-600 ring-2 ring-amber-400/30' : 'border-[#DED7CB]'}`}>
-    {plan.bestValue && <div className="absolute -top-3 right-3 bg-amber-600 text-white text-[10px] px-3 py-1 rounded-full font-black">MELHOR VALOR</div>}
-    <h4 className="text-3xl serif text-[#2A2119] text-center">{plan.title}</h4>
-    <p className="text-center text-4xl serif mt-4 text-[#2A2119]">{plan.price}</p>
-    <p className="text-center text-lg text-[#7B6D5D]">{plan.cycle}</p>
-    <div className="h-px bg-[#E8E0D3] my-4" />
-    <ul className="space-y-1 text-sm text-[#463b31]">
+  <div className={`rounded-2xl border px-2 py-2.5 bg-[#FFFCF7] shadow-[0_8px_18px_rgba(54,39,22,0.1)] relative ${selected || plan.bestValue ? 'border-amber-600 ring-1 ring-amber-400/45' : 'border-[#DED7CB]'}`}>
+    {plan.bestValue && <div className="absolute -top-3 right-1 bg-amber-600 text-white text-[8px] px-2 py-1 rounded-full font-black">MELHOR VALOR</div>}
+    <h4 className="text-[1.05rem] serif text-[#2A2119] text-center leading-none">{plan.title}</h4>
+    <div className="mx-auto my-2 w-8 h-8 rounded-full bg-[#F2EBDD] flex items-center justify-center text-[#9B671A]">
+      <Clock3 size={15} strokeWidth={1.7} />
+    </div>
+    <p className="text-center text-[1.06rem] serif mt-1 text-[#2A2119] leading-none">{plan.price}</p>
+    <p className="text-center text-xs text-[#5C4E41]">{plan.cycle}</p>
+    <div className="h-px bg-[#E8E0D3] my-2" />
+    <ul className="space-y-1 text-[9px] text-[#463b31] leading-tight">
       <li>✓ Análises ilimitadas</li>
       <li>✓ Favoritos e histórico</li>
       <li>✓ Mais profundidade</li>
       <li>✓ Acesso premium</li>
     </ul>
-    <button onClick={onSelect} className={`mt-5 w-full py-2 rounded-xl border font-black text-sm ${selected ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-[#8D621F] border-amber-600'}`}>ESCOLHER</button>
+    <button onClick={onSelect} className={`mt-3 w-full py-1.5 rounded-lg border font-black text-[9px] ${selected ? 'bg-gradient-to-b from-[#E6A82E] to-[#C47B00] text-white border-amber-600' : 'bg-white text-[#8D621F] border-amber-600'}`}>ESCOLHER</button>
   </div>
 );
 
 const PlansGrid: React.FC<{ selectedPlan: PlanId | null; onSelect: (planId: PlanId) => void }> = ({ selectedPlan, onSelect }) => (
-  <section className="space-y-4">
-    <h3 className="text-4xl serif text-[#2E241B]">Planos disponíveis</h3>
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+  <section className="space-y-2">
+    <h3 className="text-[1.55rem] serif text-[#2E241B] flex items-center gap-2"><Landmark size={18} className="text-[#9B671A]" />Planos disponíveis</h3>
+    <div className="grid grid-cols-4 gap-2">
       {PLANS.map((plan) => <PlanCard key={plan.planId} plan={plan} selected={selectedPlan === plan.planId} onSelect={() => onSelect(plan.planId)} />)}
     </div>
   </section>
 );
 
 const BenefitsSection = () => (
-  <section className="space-y-4">
-    <h3 className="text-4xl serif text-[#2E241B]">Com qualquer plano, você tem:</h3>
-    <div className="rounded-3xl bg-white border border-[#DED7CB] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 overflow-hidden">
+  <section className="space-y-2">
+    <h3 className="text-[1.35rem] serif text-[#2E241B]">Com qualquer plano, você tem:</h3>
+    <div className="rounded-3xl bg-white border border-[#DED7CB] grid grid-cols-4 overflow-hidden">
       {[
-        ['∞', 'Análises ilimitadas', 'Interpretações sem limites.'],
-        ['⟳', 'Histórico completo', 'Acompanhe suas descobertas.'],
-        ['♥', 'Favoritos', 'Salve o que é importante.'],
-        ['◇', 'Experiência premium', 'Recursos exclusivos e atualizações.'],
-      ].map(([icon, title, text]) => (
-        <div key={title} className="p-4 border-b sm:border-b-0 sm:border-r last:border-r-0 border-[#E8E0D3] text-center">
-          <div className="text-3xl mb-2">{icon}</div>
-          <p className="text-xl serif text-[#2A2119]">{title}</p>
-          <p className="text-sm text-[#6E6256]">{text}</p>
+        { icon: BarChart2, title: 'Análises ilimitadas', text: 'Interpretações sem limites.' },
+        { icon: RotateCcw, title: 'Histórico completo', text: 'Acompanhe suas descobertas.' },
+        { icon: Heart, title: 'Favoritos', text: 'Salve o que é importante.' },
+        { icon: TrendingUp, title: 'Experiência premium', text: 'Recursos exclusivos e atualizações.' },
+      ].map(({ icon: Icon, title, text }) => (
+        <div key={title} className="p-2 border-r last:border-r-0 border-[#E8E0D3] text-center">
+          <div className="mb-2 flex justify-center text-[#8A7763]">
+            <span className="w-9 h-9 rounded-full bg-[#F2EBDD] flex items-center justify-center"><Icon size={17} strokeWidth={1.5} /></span>
+          </div>
+          <p className="text-[0.74rem] serif text-[#2A2119] leading-tight">{title}</p>
+          <p className="text-[0.58rem] text-[#6E6256] leading-tight mt-1">{text}</p>
         </div>
       ))}
     </div>
@@ -444,16 +541,17 @@ const BenefitsSection = () => (
 );
 
 const SubscribeButton: React.FC<{ loading: boolean; onClick: () => void }> = ({ loading, onClick }) => (
-  <button onClick={onClick} disabled={loading} className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#C99022] to-[#B87A17] text-white font-black text-xl disabled:opacity-50">
+  <button onClick={onClick} disabled={loading} className="px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C99022] to-[#B87A17] text-white font-black text-xs disabled:opacity-50 whitespace-nowrap">
     {loading ? 'PROCESSANDO...' : 'ASSINAR AGORA'}
   </button>
 );
 
 const SecurityFlexCard: React.FC<{ processing: boolean; onSubscribe: () => void }> = ({ processing, onSubscribe }) => (
-  <section className="rounded-3xl bg-[#F7F1E6] border border-[#DED7CB] p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-    <div>
-      <p className="text-4xl serif text-[#2A2119]">Segurança e flexibilidade</p>
-      <p className="text-[#5F5449]">Cancele quando quiser. Sem taxas ocultas. Sua assinatura, do seu jeito.</p>
+  <section className="rounded-3xl bg-[#F7F1E6] border border-[#DED7CB] p-3 flex items-center justify-between gap-3">
+    <Shield size={38} strokeWidth={1.4} className="text-[#9B671A] flex-shrink-0" />
+    <div className="flex-1 min-w-0">
+      <p className="text-[1.2rem] serif text-[#2A2119] leading-none">Segurança e flexibilidade</p>
+      <p className="text-[#5F5449] text-xs leading-tight mt-1">Cancele quando quiser. Sem taxas ocultas.</p>
     </div>
     <SubscribeButton loading={processing} onClick={onSubscribe} />
   </section>
@@ -466,33 +564,33 @@ const ToggleSwitch: React.FC<{ checked: boolean; onChange: (value: boolean) => v
 );
 
 const SettingsRow: React.FC<{
-  icon: string;
+  icon: React.ReactNode;
   title: string;
   subtitle: string;
   right?: React.ReactNode;
   onClick?: () => void;
 }> = ({ icon, title, subtitle, right, onClick }) => (
-  <button onClick={onClick} className="w-full text-left flex items-center justify-between gap-3 py-4 border-b border-[#E8E0D3] last:border-b-0">
+  <button onClick={onClick} className="w-full text-left flex items-center justify-between gap-3 py-2.5 border-b border-[#E8E0D3] last:border-b-0">
     <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-full bg-[#EFE7DB] flex items-center justify-center">{icon}</div>
+      <div className="w-8 h-8 rounded-full bg-[#EFE7DB] flex items-center justify-center">{icon}</div>
       <div>
-        <p className="text-[1.7rem] sm:text-3xl serif text-[#2A2119] leading-none">{title}</p>
-        <p className="text-[#6A5E52] text-sm">{subtitle}</p>
+        <p className="text-[1.28rem] sm:text-2xl serif text-[#2A2119] leading-none">{title}</p>
+        <p className="text-[#6A5E52] text-xs">{subtitle}</p>
       </div>
     </div>
-    {right ?? <span className="text-2xl text-[#9D8D7A]">›</span>}
+    {right ?? <ChevronRight size={18} strokeWidth={1.5} className="text-[#9D8D7A]" />}
   </button>
 );
 
 const PremiumAccountCard: React.FC<{ userPlan: UserPlan; onClick: () => void }> = ({ userPlan, onClick }) => (
-  <button onClick={onClick} className="w-full rounded-3xl bg-white border border-[#DED7CB] p-4 flex items-center justify-between">
+  <button onClick={onClick} className="w-[calc(100%-16px)] mx-auto -mt-12 relative z-10 rounded-3xl bg-[#FFF9EF] border border-[#DED7CB] p-3 flex items-center justify-between shadow-[0_12px_28px_rgba(50,33,18,0.12)]">
     <div className="flex items-center gap-3">
-      <div className="w-14 h-14 rounded-full overflow-hidden border border-amber-500/40">
-        <img src={BRAND_LOGO_URL} alt="Conta" className="w-full h-full object-cover" />
+      <div className="w-12 h-12 rounded-full overflow-hidden border border-amber-500/40">
+        <img src={PREMIUM_AVATAR_URL} alt="Conta" className="w-full h-full object-cover" />
       </div>
       <div>
-        <p className="text-[2rem] sm:text-4xl serif text-[#2A2119] leading-none">Conta {userPlan === 'free' ? 'Free' : 'Premium'}</p>
-        <p className="text-[#6A5E52]">Gerencie sua conta e preferências</p>
+        <p className="text-[1.45rem] serif text-[#2A2119] leading-none">{userPlan === 'free' ? 'Conta Free' : 'Conta Premium'}</p>
+        <p className="text-[#6A5E52] text-sm">Gerencie sua conta e preferências</p>
       </div>
     </div>
     <span className="text-2xl text-[#9D8D7A]">›</span>
@@ -500,12 +598,14 @@ const PremiumAccountCard: React.FC<{ userPlan: UserPlan; onClick: () => void }> 
 );
 
 const SupportCard: React.FC<{ onClick: () => void }> = ({ onClick }) => (
-  <button onClick={onClick} className="w-full rounded-3xl bg-white border border-[#DED7CB] p-4 flex items-center justify-between">
+  <button onClick={onClick} className="w-full rounded-3xl bg-white border border-[#DED7CB] p-3 flex items-center justify-between">
     <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-full bg-[#EFE7DB] flex items-center justify-center">🎧</div>
+      <div className="w-10 h-10 rounded-full bg-[#EFE7DB] flex items-center justify-center text-[#8A7763]">
+        <Headphones size={16} strokeWidth={1.5} />
+      </div>
       <div>
-        <p className="text-[1.7rem] sm:text-3xl serif text-[#2A2119] leading-none">Fale com o suporte</p>
-        <p className="text-[#6A5E52]">Estamos aqui para ajudar você</p>
+        <p className="text-[1.3rem] sm:text-2xl serif text-[#2A2119] leading-none">Fale com o suporte</p>
+        <p className="text-[#6A5E52] text-xs">Estamos aqui para ajudar você</p>
       </div>
     </div>
     <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">Online</span>
@@ -513,22 +613,27 @@ const SupportCard: React.FC<{ onClick: () => void }> = ({ onClick }) => (
 );
 
 const BottomNav: React.FC<{ activeTab: AppTab; onChange: (tab: AppTab) => void }> = ({ activeTab, onChange }) => {
-  const items: { id: AppTab; label: string; icon: string }[] = [
-    { id: 'home', label: 'HOME', icon: '🏠' },
-    { id: 'movies_series', label: 'FILMES E SÉRIES', icon: '🎬' },
-    { id: 'books', label: 'LIVROS', icon: '📖' },
-    { id: 'music', label: 'MÚSICAS', icon: '🎵' },
-    { id: 'store', label: 'LOJA', icon: '👜' },
-    { id: 'settings', label: 'CONFIG.', icon: '⚙️' },
+  const items: { id: AppTab; label: string; icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }> }[] = [
+    { id: 'home', label: 'HOME', icon: House },
+    { id: 'movies_series', label: 'FILMES E SÉRIES', icon: Film },
+    { id: 'books', label: 'LIVROS', icon: BookOpen },
+    { id: 'music', label: 'MÚSICAS', icon: Music },
+    { id: 'store', label: 'LOJA', icon: ShoppingBag },
+    { id: 'settings', label: 'CONFIG.', icon: Settings },
   ];
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 z-[1000] border-t bg-[#ECE7DF] border-[#D9D1C6] flex justify-around items-center rounded-t-[1.2rem] max-w-[430px] w-full" style={{ height: `${BOTTOM_NAV_HEIGHT}px`, paddingBottom: 'env(safe-area-inset-bottom)' }}>
-      {items.map((item) => (
-        <button key={item.id} onClick={() => onChange(item.id)} className={`nav-tab ${activeTab === item.id ? 'active' : ''}`}>
-          <div className="tab-icon-wrapper">{item.icon}</div>
+    <nav className="absolute bottom-0 left-0 z-[1000] border-t bg-[#F2ECE2] border-[#DDD4C7] flex justify-around items-center rounded-t-[1.2rem] w-full" style={{ height: `${BOTTOM_NAV_HEIGHT}px`, paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      {items.map((item) => {
+        const Icon = item.icon;
+        return (
+          <button key={item.id} onClick={() => onChange(item.id)} className={`nav-tab ${activeTab === item.id ? 'active' : ''}`}>
+            <div className="tab-icon-wrapper">
+              <Icon size={19} strokeWidth={1.6} />
+            </div>
           <span className="tab-label">{item.label}</span>
         </button>
-      ))}
+        );
+      })}
     </nav>
   );
 };
@@ -543,13 +648,13 @@ const App: React.FC = () => {
   const [moviesQuery, setMoviesQuery] = useState('');
   const [moviesSearchType, setMoviesSearchType] = useState<MoviesSearchType>('movie');
   const [moviesAnalysisType, setMoviesAnalysisType] = useState<MoviesAnalysisTypeOption>("Final explicado, símbolos e mensagem central");
+  const [moviesResponseStyle] = useState<MoviesResponseStyle>('profundo');
   const [moviesFocusChip, setMoviesFocusChip] = useState<MoviesFocusChipOption | null>(null);
   const [moviesSpoilerMode, setMoviesSpoilerMode] = useState(false);
   const [moviesShowDropdown, setMoviesShowDropdown] = useState(false);
   const [moviesLoading, setMoviesLoading] = useState(false);
   const [moviesResult, setMoviesResult] = useState<MovieAnalysis | null>(null);
   const [moviesError, setMoviesError] = useState<string | null>(null);
-  const [moviesPayload, setMoviesPayload] = useState<Record<string, unknown> | null>(null);
   const [moviesSearchResults, setMoviesSearchResults] = useState<UnifiedSearchResult[]>([]);
   const [moviesSearchLoading, setMoviesSearchLoading] = useState(false);
   const [moviesShowResults, setMoviesShowResults] = useState(false);
@@ -566,7 +671,6 @@ const App: React.FC = () => {
   const [booksLoading, setBooksLoading] = useState(false);
   const [booksResult, setBooksResult] = useState<MovieAnalysis | null>(null);
   const [booksError, setBooksError] = useState<string | null>(null);
-  const [booksPayload, setBooksPayload] = useState<Record<string, unknown> | null>(null);
   const [booksSearchResults, setBooksSearchResults] = useState<UnifiedSearchResult[]>([]);
   const [booksSearchLoading, setBooksSearchLoading] = useState(false);
   const [booksShowResults, setBooksShowResults] = useState(false);
@@ -589,7 +693,6 @@ const App: React.FC = () => {
   const [musicLoading, setMusicLoading] = useState(false);
   const [musicResult, setMusicResult] = useState<MovieAnalysis | null>(null);
   const [musicError, setMusicError] = useState<string | null>(null);
-  const [musicPayload, setMusicPayload] = useState<Record<string, unknown> | null>(null);
 
   const [selectedPlan, setSelectedPlan] = useState<PlanId | null>('annual');
   const [purchaseState, setPurchaseState] = useState<PurchaseState>('idle');
@@ -603,8 +706,27 @@ const App: React.FC = () => {
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const musicSearchRequestId = useRef(0);
+  const moviesSearchRequestId = useRef(0);
+  const booksSearchRequestId = useRef(0);
 
   const normalize = (v: string) => v.replace(/\s+/g, ' ').trim();
+  const buildLocalAutocomplete = (queryText: string, pool: string[], idPrefix: string): UnifiedSearchResult[] => {
+    const cleaned = normalize(queryText).toLowerCase();
+    if (cleaned.length < 2) return [];
+    const deduped = Array.from(new Set(pool.map((item) => normalize(item)).filter(Boolean)));
+    return deduped
+      .filter((item) => item.toLowerCase().includes(cleaned))
+      .slice(0, 6)
+      .map((title, index) => ({
+        id: `${idPrefix}-${index}-${title.toLowerCase()}`,
+        source: 'omdb',
+        title,
+        year: '',
+        type: 'movie',
+        poster: null,
+      }));
+  };
   const selectedPlanData = PLANS.find((p) => p.planId === (selectedPlan ?? 'annual')) ?? PLANS[3];
 
   useEffect(() => {
@@ -638,33 +760,60 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const t = setTimeout(async () => {
+      const requestId = ++musicSearchRequestId.current;
       const n = normalize(query);
-      if (n.length >= 2) {
-        setSearchLoading(true);
-        const rs = await runUnifiedSearch(n);
-        setSearchResults(rs);
-        setShowResults(rs.length > 0);
-        setSearchLoading(false);
-      } else {
+      if (n.length < 2) {
+        if (requestId !== musicSearchRequestId.current) return;
         setSearchResults([]);
         setShowResults(false);
+        setSearchLoading(false);
+        return;
+      }
+      setSearchLoading(true);
+      try {
+        const pool = musicSearchType === 'track'
+          ? [...QUICK_SUGGESTIONS.music.track, ...recentTracks]
+          : [...QUICK_SUGGESTIONS.music.artist, ...recentArtists];
+        const rs = buildLocalAutocomplete(n, pool, `music-${musicSearchType}`);
+        if (requestId !== musicSearchRequestId.current) return;
+        setSearchResults(rs);
+        setShowResults(rs.length > 0);
+      } catch {
+        if (requestId !== musicSearchRequestId.current) return;
+        setSearchResults([]);
+        setShowResults(false);
+      } finally {
+        if (requestId !== musicSearchRequestId.current) return;
+        setSearchLoading(false);
       }
     }, 250);
     return () => clearTimeout(t);
-  }, [query]);
+  }, [query, musicSearchType, recentTracks, recentArtists]);
 
   useEffect(() => {
     const t = setTimeout(async () => {
+      const requestId = ++moviesSearchRequestId.current;
       const n = normalize(moviesQuery);
-      if (n.length >= 2) {
-        setMoviesSearchLoading(true);
-        const rs = await runUnifiedSearch(n);
-        setMoviesSearchResults(rs);
-        setMoviesShowResults(rs.length > 0);
-        setMoviesSearchLoading(false);
-      } else {
+      if (n.length < 2) {
+        if (requestId !== moviesSearchRequestId.current) return;
         setMoviesSearchResults([]);
         setMoviesShowResults(false);
+        setMoviesSearchLoading(false);
+        return;
+      }
+      setMoviesSearchLoading(true);
+      try {
+        const rs = await runUnifiedSearch(n);
+        if (requestId !== moviesSearchRequestId.current) return;
+        setMoviesSearchResults(rs);
+        setMoviesShowResults(rs.length > 0);
+      } catch {
+        if (requestId !== moviesSearchRequestId.current) return;
+        setMoviesSearchResults([]);
+        setMoviesShowResults(false);
+      } finally {
+        if (requestId !== moviesSearchRequestId.current) return;
+        setMoviesSearchLoading(false);
       }
     }, 250);
     return () => clearTimeout(t);
@@ -672,20 +821,35 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const t = setTimeout(async () => {
+      const requestId = ++booksSearchRequestId.current;
       const n = normalize(booksQuery);
-      if (n.length >= 2) {
-        setBooksSearchLoading(true);
-        const rs = await runUnifiedSearch(n);
-        setBooksSearchResults(rs);
-        setBooksShowResults(rs.length > 0);
-        setBooksSearchLoading(false);
-      } else {
+      if (n.length < 2) {
+        if (requestId !== booksSearchRequestId.current) return;
         setBooksSearchResults([]);
         setBooksShowResults(false);
+        setBooksSearchLoading(false);
+        return;
+      }
+      setBooksSearchLoading(true);
+      try {
+        const pool = booksSearchType === 'book'
+          ? [...QUICK_SUGGESTIONS.books.book, ...recentBooks]
+          : [...QUICK_SUGGESTIONS.books.author, ...recentAuthors];
+        const rs = buildLocalAutocomplete(n, pool, `books-${booksSearchType}`);
+        if (requestId !== booksSearchRequestId.current) return;
+        setBooksSearchResults(rs);
+        setBooksShowResults(rs.length > 0);
+      } catch {
+        if (requestId !== booksSearchRequestId.current) return;
+        setBooksSearchResults([]);
+        setBooksShowResults(false);
+      } finally {
+        if (requestId !== booksSearchRequestId.current) return;
+        setBooksSearchLoading(false);
       }
     }, 250);
     return () => clearTimeout(t);
-  }, [booksQuery]);
+  }, [booksQuery, booksSearchType, recentBooks, recentAuthors]);
 
   const suggestions = useMemo<SearchSuggestionItem[]>(() => {
     const n = normalize(query);
@@ -693,7 +857,7 @@ const App: React.FC = () => {
       const hist = musicSearchType === 'track' ? recentTracks : recentArtists;
       return hist.map((v, i) => ({ id: `h-${i}-${v}`, title: v, subtitle: musicSearchType === 'track' ? 'Música recente' : 'Artista recente', kind: 'history' }));
     }
-    return searchResults.map((r) => ({ id: r.id, title: r.title, subtitle: `${r.year} • ${musicSearchType === 'track' ? 'Faixa' : 'Artista'}`, poster: r.poster, kind: 'search' }));
+    return searchResults.map((r) => ({ id: r.id, title: r.title, subtitle: r.year ? `${r.year} • ${musicSearchType === 'track' ? 'Faixa' : 'Artista'}` : musicSearchType === 'track' ? 'Faixa sugerida' : 'Artista sugerido', poster: r.poster, kind: 'search' }));
   }, [query, showHistory, musicSearchType, recentTracks, recentArtists, searchResults]);
 
   const moviesSuggestions = useMemo<SearchSuggestionItem[]>(() => {
@@ -711,7 +875,7 @@ const App: React.FC = () => {
       const hist = booksSearchType === 'book' ? recentBooks : recentAuthors;
       return hist.map((v, i) => ({ id: `b-${i}-${v}`, title: v, subtitle: booksSearchType === 'book' ? 'Livro recente' : 'Autor recente', kind: 'history' }));
     }
-    return booksSearchResults.map((r) => ({ id: r.id, title: r.title, subtitle: `${r.year} • referência`, poster: r.poster, kind: 'search' }));
+    return booksSearchResults.map((r) => ({ id: r.id, title: r.title, subtitle: r.year ? `${r.year} • referência` : booksSearchType === 'book' ? 'Livro sugerido' : 'Autor sugerido', poster: r.poster, kind: 'search' }));
   }, [booksQuery, booksShowHistory, booksSearchType, recentBooks, recentAuthors, booksSearchResults]);
 
   const runMusicAnalysis = async () => {
@@ -727,12 +891,11 @@ const App: React.FC = () => {
       userPlan,
       userId,
     };
-    setMusicPayload(payload);
     setMusicLoading(true);
     setMusicError(null);
     try {
       const mode: AnalysisMode = musicMainFocus === 'emotion' ? 'reflexivo' : musicAnalysisType === "Interpretação geral" ? 'direto' : 'profundo';
-      const result = await interpretMovie(cleaned, mode, 'filme' as ContentType, { ...payload, focusChip: payload.chipFocus });
+      const result = await interpretMovie(cleaned, mode, 'musica', { ...payload, focusChip: payload.chipFocus });
       setMusicResult(result);
       const hist = musicSearchType === 'track'
         ? [cleaned, ...recentTracks.filter((x) => x.toLowerCase() !== cleaned.toLowerCase())].slice(0, 8)
@@ -760,16 +923,21 @@ const App: React.FC = () => {
       mediaType: moviesSearchType,
       title: cleaned,
       spoilerMode: moviesSpoilerMode,
+      responseStyle: moviesResponseStyle,
       analysisType: moviesAnalysisType,
       focusChip: moviesFocusChip ?? undefined,
       userPlan,
       userId,
     };
-    setMoviesPayload(payload);
     setMoviesLoading(true);
     setMoviesError(null);
     try {
-      const mode: AnalysisMode = moviesAnalysisType === "Interpretação geral da obra" ? 'direto' : moviesAnalysisType === "Contexto, mensagem e crítica" ? 'reflexivo' : 'profundo';
+      const modeByStyle: Record<MoviesResponseStyle, AnalysisMode> = {
+        resumido: 'direto',
+        reflexivo: 'reflexivo',
+        profundo: 'profundo',
+      };
+      const mode: AnalysisMode = modeByStyle[moviesResponseStyle];
       const contentType: ContentType = moviesSearchType === 'movie' ? 'filme' : 'serie';
       const result = await interpretMovie(cleaned, mode, contentType, payload);
       setMoviesResult(result);
@@ -804,12 +972,11 @@ const App: React.FC = () => {
       userPlan,
       userId,
     };
-    setBooksPayload(payload);
     setBooksLoading(true);
     setBooksError(null);
     try {
       const mode: AnalysisMode = booksDepthMode === 'quick' ? 'direto' : booksAnalysisType === 'Contexto histórico e mensagem' ? 'reflexivo' : 'profundo';
-      const result = await interpretMovie(cleaned, mode, 'filme', payload);
+      const result = await interpretMovie(cleaned, mode, 'livro', payload);
       setBooksResult(result);
       const hist = booksSearchType === 'book'
         ? [cleaned, ...recentBooks.filter((x) => x.toLowerCase() !== cleaned.toLowerCase())].slice(0, 8)
@@ -877,15 +1044,24 @@ const App: React.FC = () => {
   };
 
   const renderMusic = () => (
-    <div className={musicResult ? "space-y-6 pb-4" : "h-full flex flex-col gap-3"}>
-      <HeaderBlock title="Músicas" subtitle="Interprete letras, emoções e significados" accentA="🎵" accentB="🎧" vibeA="💿" vibeB="🎼" />
+    <div className={musicResult ? "h-full" : "h-full flex flex-col gap-2"}>
+      {!musicResult && <HeaderBlock title="Músicas" subtitle="Interprete letras, emoções e significados" image={MUSIC_HERO_URL} tall />}
       {!musicResult && (
-        <section className="rounded-[2rem] bg-[#F2EEE8] border border-[#DED7CB] shadow-[0_16px_40px_rgba(0,0,0,0.14)] p-4 space-y-4">
+        <section className="rounded-[1.6rem] bg-[#F2EEE8] border border-[#DED7CB] shadow-[0_12px_26px_rgba(0,0,0,0.12)] p-3 space-y-2.5">
           <SegmentedToggle value={musicSearchType} onChange={(v) => setMusicSearchType(v as MusicSearchType)} options={[{ id: 'track', label: 'MÚSICA' }, { id: 'artist', label: 'ARTISTA' }]} />
+          <QuickSuggestionsRow
+            items={QUICK_SUGGESTIONS.music[musicSearchType]}
+            onSelect={(value) => {
+              setQuery(value);
+              setShowHistory(false);
+              setShowResults(false);
+            }}
+          />
           <SearchInput
             value={query}
             placeholder={musicSearchType === 'track' ? "Ex.: Bohemian Rhapsody, Trem Bala..." : "Ex.: Queen, Djavan, Adele..."}
             loading={searchLoading}
+            showCameraButton
             showSuggestions={(showResults || showHistory) && !musicLoading}
             suggestions={suggestions}
             onChange={(v) => {
@@ -905,7 +1081,7 @@ const App: React.FC = () => {
           />
           <DropdownField label="Tipo de análise" value={musicAnalysisType} isOpen={showMusicDropdown} onToggle={() => setShowMusicDropdown((v) => !v)} options={MUSIC_ANALYSIS_TYPES} onSelect={(v) => { setMusicAnalysisType(v as MusicAnalysisTypeOption); setShowMusicDropdown(false); }} />
           <div>
-            <label className="block text-[#3A2E24] text-2xl serif mb-2">Foco</label>
+            <label className="block text-[#3A2E24] text-lg serif mb-1.5">Foco</label>
             <SegmentedToggle value={musicMainFocus} onChange={(v) => setMusicMainFocus(v as MusicMainFocus)} options={[{ id: 'lyrics', label: 'LETRA' }, { id: 'context', label: 'CONTEXTO' }, { id: 'emotion', label: 'EMOÇÃO' }]} />
           </div>
           <ChipsRow chips={["Simbologia", "Refrão", "Sentimento", "Referências"]} value={musicChipFocus} onChange={(v) => setMusicChipFocus(v as MusicFocusChipOption | null)} />
@@ -914,36 +1090,53 @@ const App: React.FC = () => {
         </section>
       )}
       {musicResult && (
-        <section className="rounded-[2rem] bg-[#F2EEE8] border border-[#DED7CB] shadow-[0_16px_40px_rgba(0,0,0,0.14)] p-4 md:p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-3xl serif text-[#2A2119]">{musicSearchType === 'track' ? musicResult.info.originalTitle : query}</h3>
-            <button onClick={() => setMusicResult(null)} className="text-sm text-[#8D621F] font-semibold">Nova busca</button>
-          </div>
-          <AnalysisLayers result={musicResult} />
-          <div className="rounded-xl bg-white border border-[#E0D6C9] p-4">
-            <p className="text-[#8D621F] text-xs uppercase tracking-wider font-bold mb-1">Payload enviado</p>
-            <pre className="text-xs text-[#5F5449] whitespace-pre-wrap">{JSON.stringify(musicPayload, null, 2)}</pre>
-          </div>
-        </section>
+        <MusicResultScreen
+          result={musicResult}
+          title={musicSearchType === 'track' ? musicResult.info.originalTitle : query}
+          onNewSearch={() => setMusicResult(null)}
+          bannerImage={MUSIC_HERO_URL}
+          artistImage={PREMIUM_AVATAR_URL}
+        />
       )}
-      {musicResult && <CardsSection title="Destaques de hoje" onSelect={() => { }} cards={[
-        { id: 'mensagem', title: 'MENSAGEM DA LETRA', subtitle: 'Essência e significado', emoji: '✍️' },
-        { id: 'sentimento', title: 'SENTIMENTO CENTRAL', subtitle: 'Emoção dominante', emoji: '💛' },
-        { id: 'contexto', title: 'CONTEXTO DA CANÇÃO', subtitle: 'Tempo, cenário e referências', emoji: '🎸' },
+      {!musicResult && <CardsSection title="Destaques de hoje" onSelect={(id) => {
+        if (id === 'mensagem') setMusicAnalysisType('Significado da letra e mensagem central');
+        if (id === 'sentimento') setMusicAnalysisType('Emoção principal e sentimento');
+        if (id === 'contexto') setMusicAnalysisType('Contexto da canção');
+        setToast('Destaque aplicado à sua próxima análise.');
+      }} cards={[
+        { id: 'mensagem', title: 'MENSAGEM DA LETRA', subtitle: '', image: MUSIC_CARD_MENSAGEM_URL, hideOverlay: true },
+        { id: 'sentimento', title: 'SENTIMENTO CENTRAL', subtitle: '', image: MUSIC_CARD_SENTIMENTO_URL, hideOverlay: true },
+        { id: 'contexto', title: 'CONTEXTO DA CANÇÃO', subtitle: '', image: MUSIC_CARD_CONTEXTO_URL, hideOverlay: true },
       ]} />}
     </div>
   );
 
   const renderMovies = () => (
-    <div className={moviesResult ? "space-y-6 pb-4" : "h-full flex flex-col gap-3"}>
-      <MoviesHeroBanner onOpenSettings={() => setActiveTab('settings')} />
+    <div className={moviesResult ? "h-full" : "h-full flex flex-col gap-2"}>
+      {!moviesResult && <MoviesHeroBanner />}
       {!moviesResult && (
-        <section className="rounded-[2rem] bg-[#F6F3EE] border border-[#DED7CB] shadow-[0_14px_34px_rgba(0,0,0,0.1)] px-4 py-4 space-y-3">
-          <SegmentedToggle value={moviesSearchType} onChange={(v) => setMoviesSearchType(v as MoviesSearchType)} options={[{ id: 'movie', label: 'FILME' }, { id: 'series', label: 'SÉRIE' }]} />
+        <section className="rounded-[1.6rem] bg-[#F6F3EE] border border-[#DED7CB] shadow-[0_12px_26px_rgba(0,0,0,0.1)] px-3 py-3 space-y-2.5">
+          <SegmentedToggle
+            value={moviesSearchType}
+            onChange={(v) => setMoviesSearchType(v as MoviesSearchType)}
+            options={[
+              { id: 'movie', label: 'FILME' },
+              { id: 'series', label: 'SÉRIE' }
+            ]}
+          />
+          <QuickSuggestionsRow
+            items={QUICK_SUGGESTIONS.movies[moviesSearchType]}
+            onSelect={(value) => {
+              setMoviesQuery(value);
+              setMoviesShowHistory(false);
+              setMoviesShowResults(false);
+            }}
+          />
           <SearchInput
             value={moviesQuery}
             placeholder={moviesSearchType === 'movie' ? "Ex.: Matrix, Interestelar, O Poderoso Chefão..." : "Ex.: Dark, Breaking Bad, Lost..."}
             loading={moviesSearchLoading}
+            showCameraButton
             showSuggestions={(moviesShowResults || moviesShowHistory) && !moviesLoading}
             suggestions={moviesSuggestions}
             onChange={(v) => {
@@ -962,32 +1155,56 @@ const App: React.FC = () => {
             onSelectSuggestion={(title) => { setMoviesQuery(title); setMoviesShowHistory(false); setMoviesShowResults(false); }}
           />
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <label className="block text-[#3A2E24] text-[2rem] leading-none serif">Modo spoiler</label>
-              <span className="w-5 h-5 rounded-full border border-[#C9BAA9] text-[#8F7D67] text-xs flex items-center justify-center">i</span>
+            <label className="block text-[#3A2E24] text-sm font-semibold">Modo spoiler</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setMoviesSpoilerMode(false)}
+                className={`h-9 rounded-xl border flex items-center justify-center gap-2 text-xs font-semibold transition-colors ${!moviesSpoilerMode ? 'bg-[#F3E4CA] border-[#CFA14F] text-[#8D621F]' : 'bg-white border-[#DED7CB] text-[#8F8478]'}`}
+              >
+                <Eye size={16} strokeWidth={1.6} />
+                SEM SPOILER
+              </button>
+              <button
+                onClick={() => setMoviesSpoilerMode(true)}
+                className={`h-9 rounded-xl border flex items-center justify-center gap-2 text-xs font-semibold transition-colors ${moviesSpoilerMode ? 'bg-[#F3E4CA] border-[#CFA14F] text-[#8D621F]' : 'bg-white border-[#DED7CB] text-[#8F8478]'}`}
+              >
+                <EyeOff size={16} strokeWidth={1.6} />
+                COM SPOILER
+              </button>
             </div>
-            <SegmentedToggle value={moviesSpoilerMode ? 'on' : 'off'} onChange={(v) => setMoviesSpoilerMode(v === 'on')} options={[{ id: 'off', label: 'SEM SPOILER' }, { id: 'on', label: 'COM SPOILER' }]} />
           </div>
           <DropdownField label="Tipo de análise" value={moviesAnalysisType} isOpen={moviesShowDropdown} onToggle={() => setMoviesShowDropdown((v) => !v)} options={MOVIES_ANALYSIS_TYPES} onSelect={(v) => { setMoviesAnalysisType(v as MoviesAnalysisTypeOption); setMoviesShowDropdown(false); }} />
-          <ChipsRow chips={["Personagens", "Temas", "Contexto", "Arco final"]} value={moviesFocusChip} onChange={(v) => setMoviesFocusChip(v as MoviesFocusChipOption | null)} />
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: 'Personagens', label: 'Personagens', icon: Users },
+              { id: 'Temas', label: 'Temas', icon: Compass },
+              { id: 'Contexto', label: 'Contexto', icon: Globe },
+              { id: 'Arco final', label: 'Arco final', icon: TrendingUp },
+            ].map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => setMoviesFocusChip(moviesFocusChip === id ? null : id as MoviesFocusChipOption)}
+                className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all flex items-center gap-1.5 ${moviesFocusChip === id ? 'bg-[#F3E4CA] border-[#CFA14F] text-[#8D621F]' : 'bg-[#F4F0EA] border-[#D7D0C6] text-[#60554A]'}`}
+              >
+                <Icon size={14} strokeWidth={1.8} />
+                {label}
+              </button>
+            ))}
+          </div>
           <InterpretButton disabled={moviesLoading || normalize(moviesQuery).length === 0} loading={moviesLoading} onClick={runMoviesAnalysis} />
           {moviesError && <p className="text-red-700 bg-red-100 border border-red-200 rounded-xl px-4 py-3 text-sm">{moviesError}</p>}
         </section>
       )}
       {moviesResult && (
-        <section className="rounded-[2rem] bg-[#F2EEE8] border border-[#DED7CB] shadow-[0_16px_40px_rgba(0,0,0,0.14)] p-4 md:p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-3xl serif text-[#2A2119]">{moviesResult.info.originalTitle}</h3>
-            <button onClick={() => setMoviesResult(null)} className="text-sm text-[#8D621F] font-semibold">Nova busca</button>
-          </div>
-          <AnalysisLayers result={moviesResult} showSpoilers={moviesSpoilerMode} />
-          <div className="rounded-xl bg-white border border-[#E0D6C9] p-4">
-            <p className="text-[#8D621F] text-xs uppercase tracking-wider font-bold mb-1">Payload enviado</p>
-            <pre className="text-xs text-[#5F5449] whitespace-pre-wrap">{JSON.stringify(moviesPayload, null, 2)}</pre>
-          </div>
-        </section>
+        <MusicResultScreen
+          result={moviesResult}
+          title={moviesResult.info.originalTitle}
+          onNewSearch={() => setMoviesResult(null)}
+          bannerImage={MOVIES_HERO_URL}
+          artistImage={PREMIUM_AVATAR_URL}
+        />
       )}
-      {moviesResult && (
+      {!moviesResult && (
         <SuggestionsSection
           onViewAll={() => setToast('Mostrando todas as sugestões de hoje.')}
           onSelect={(id) => {
@@ -1013,15 +1230,24 @@ const App: React.FC = () => {
   );
 
   const renderBooks = () => (
-    <div className={booksResult ? "space-y-6 pb-4" : "h-full flex flex-col gap-3"}>
-      <HeaderBlock title="Livros" subtitle="Descubra temas, símbolos e camadas da leitura" accentA="📚" accentB="🔎" vibeA="🕯️" vibeB="📖" />
+    <div className={booksResult ? "h-full" : "h-full flex flex-col gap-2"}>
+      {!booksResult && <HeaderBlock title="Livros" subtitle="Descubra temas, símbolos e camadas da leitura" image={BOOKS_HERO_URL} tall />}
       {!booksResult && (
-        <section className="rounded-[2rem] bg-[#F2EEE8] border border-[#DED7CB] shadow-[0_16px_40px_rgba(0,0,0,0.14)] p-4 space-y-4">
+        <section className="rounded-[1.6rem] bg-[#F2EEE8] border border-[#DED7CB] shadow-[0_12px_26px_rgba(0,0,0,0.12)] p-3 space-y-2.5">
           <SegmentedToggle value={booksSearchType} onChange={(v) => setBooksSearchType(v as BooksSearchType)} options={[{ id: 'book', label: 'LIVRO' }, { id: 'author', label: 'AUTOR' }]} />
+          <QuickSuggestionsRow
+            items={QUICK_SUGGESTIONS.books[booksSearchType]}
+            onSelect={(value) => {
+              setBooksQuery(value);
+              setBooksShowHistory(false);
+              setBooksShowResults(false);
+            }}
+          />
           <SearchInput
             value={booksQuery}
             placeholder={booksSearchType === 'book' ? "Ex.: 1984, Dom Casmurro, O Hobbit..." : "Ex.: Machado de Assis, Tolkien, C. S. Lewis..."}
             loading={booksSearchLoading}
+            showCameraButton
             showSuggestions={(booksShowResults || booksShowHistory) && !booksLoading}
             suggestions={booksSuggestions}
             onChange={(v) => {
@@ -1041,7 +1267,7 @@ const App: React.FC = () => {
           />
           <DropdownField label="Tipo de análise" value={booksAnalysisType} isOpen={booksShowDropdown} onToggle={() => setBooksShowDropdown((v) => !v)} options={BOOKS_ANALYSIS_TYPES} onSelect={(v) => { setBooksAnalysisType(v as BooksAnalysisTypeOption); setBooksShowDropdown(false); }} />
           <div>
-            <label className="block text-[#3A2E24] text-2xl serif mb-2">Profundidade</label>
+            <label className="block text-[#3A2E24] text-lg serif mb-1.5">Profundidade</label>
             <SegmentedToggle value={booksDepthMode} onChange={(v) => setBooksDepthMode(v as BooksDepthMode)} options={[{ id: 'quick', label: 'RÁPIDA' }, { id: 'deep', label: 'PROFUNDA' }]} />
           </div>
           <ChipsRow chips={["Resumo", "Personagens", "Contexto", "Citações"]} value={booksFocusChip} onChange={(v) => setBooksFocusChip(v as BooksFocusChipOption | null)} />
@@ -1050,56 +1276,58 @@ const App: React.FC = () => {
         </section>
       )}
       {booksResult && (
-        <section className="rounded-[2rem] bg-[#F2EEE8] border border-[#DED7CB] shadow-[0_16px_40px_rgba(0,0,0,0.14)] p-4 md:p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-3xl serif text-[#2A2119]">{booksSearchType === 'book' ? booksResult.info.originalTitle : booksQuery}</h3>
-            <button onClick={() => setBooksResult(null)} className="text-sm text-[#8D621F] font-semibold">Nova busca</button>
-          </div>
-          <AnalysisLayers result={booksResult} />
-          <div className="rounded-xl bg-white border border-[#E0D6C9] p-4">
-            <p className="text-[#8D621F] text-xs uppercase tracking-wider font-bold mb-1">Payload enviado</p>
-            <pre className="text-xs text-[#5F5449] whitespace-pre-wrap">{JSON.stringify(booksPayload, null, 2)}</pre>
-          </div>
-        </section>
+        <MusicResultScreen
+          result={booksResult}
+          title={booksSearchType === 'book' ? booksResult.info.originalTitle : booksQuery}
+          onNewSearch={() => setBooksResult(null)}
+          bannerImage={BOOKS_HERO_URL}
+          artistImage={PREMIUM_AVATAR_URL}
+        />
       )}
+      {!booksResult && <CardsSection title="Explorar hoje" onSelect={(id) => {
+        if (id === 'tema') setBooksAnalysisType('Tema central, personagens e simbolismos');
+        if (id === 'personagens') setBooksFocusChip('Personagens');
+        if (id === 'camadas') setBooksAnalysisType('Camadas do texto e subtexto');
+        setToast('Exploração aplicada à sua próxima leitura.');
+      }} cards={[
+        { id: 'tema', title: 'TEMA CENTRAL', subtitle: '', image: BOOKS_CARD_TEMA_URL, hideOverlay: true },
+        { id: 'personagens', title: 'PERSONAGENS', subtitle: '', image: BOOKS_CARD_PERSONAGENS_URL, hideOverlay: true },
+        { id: 'camadas', title: 'CAMADAS DO TEXTO', subtitle: '', image: BOOKS_CARD_CAMADAS_URL, hideOverlay: true },
+      ]} />}
     </div>
   );
 
   const renderStore = () => (
-    <div className="space-y-6 pb-4">
+    <div className="h-full flex flex-col gap-2">
       <StoreHeader />
       <PlansGrid selectedPlan={selectedPlan} onSelect={(planId) => { setSelectedPlan(planId); setPurchaseState('selectingPlan'); }} />
       <BenefitsSection />
       <SecurityFlexCard processing={purchaseState === 'processingPayment'} onSubscribe={handleSubscribe} />
-      <p className="text-center text-sm text-[#736554]">🔒 Pagamento 100% seguro. Seus dados estão protegidos.</p>
+      <p className="text-center text-sm text-[#736554]">Pagamento 100% seguro. Seus dados estão protegidos.</p>
       {purchaseState === 'success' && <p className="rounded-xl bg-emerald-100 border border-emerald-300 text-emerald-800 p-3">Assinatura premium confirmada. Bem-vindo ao Decifra Premium.</p>}
       {purchaseState === 'error' && <div className="rounded-xl bg-red-100 border border-red-300 text-red-800 p-3 space-y-2"><p>{purchaseError}</p><button onClick={handleSubscribe} className="text-sm underline">Tentar novamente</button></div>}
-      <div className="rounded-xl bg-white border border-[#DED7CB] p-3">
-        <p className="text-sm font-bold text-[#6A5E52] mb-1">Checkout payload</p>
-        <pre className="text-xs text-[#5F5449] whitespace-pre-wrap">{JSON.stringify(checkoutPayload(), null, 2)}</pre>
-      </div>
     </div>
   );
 
   const renderSettings = () => (
-    <div className="space-y-6 pb-4">
+    <div className="h-full flex flex-col gap-2">
       <SettingsHeader />
       <PremiumAccountCard userPlan={userPlan} onClick={() => setShowAccountModal(true)} />
-      <section className="space-y-3">
-        <h3 className="text-4xl serif text-[#2E241B]">Preferências</h3>
+      <section className="space-y-2">
+        <h3 className="text-[1.7rem] serif text-[#2E241B] leading-none">Preferências</h3>
         <div className="rounded-3xl bg-white border border-[#DED7CB] px-4">
-          <SettingsRow icon="👤" title="Conta" subtitle="Gerencie seus dados e assinatura" onClick={() => setShowAccountModal(true)} />
-          <SettingsRow icon="🔔" title="Notificações" subtitle="Receba alertas e novidades" right={<ToggleSwitch checked={notificationsEnabled} onChange={setNotificationsEnabled} />} />
-          <SettingsRow icon="🌙" title="Tema" subtitle="Escolha entre claro ou escuro" right={<ToggleSwitch checked={themeMode === 'dark'} onChange={(v) => setThemeMode(v ? 'dark' : 'light')} />} />
-          <SettingsRow icon="🌐" title="Idioma" subtitle={language} onClick={() => setLanguage('Português (Brasil)')} />
-          <SettingsRow icon="🛡️" title="Privacidade" subtitle="Gerencie sua privacidade e dados" onClick={() => setShowPrivacyModal(true)} />
-          <SettingsRow icon="⟳" title="Restaurar compras" subtitle="Recupere suas compras anteriores" onClick={handleRestorePurchases} />
-          <SettingsRow icon="❓" title="Ajuda" subtitle="Dúvidas frequentes e suporte" onClick={openSupport} />
-          <SettingsRow icon="ⓘ" title="Sobre o app" subtitle={`Versão ${APP_VERSION}`} onClick={() => setShowAboutModal(true)} />
+          <SettingsRow icon={<User size={16} strokeWidth={1.5} className="text-[#8A7763]" />} title="Conta" subtitle="Gerencie seus dados e assinatura" onClick={() => setShowAccountModal(true)} />
+          <SettingsRow icon={<Bell size={16} strokeWidth={1.5} className="text-[#8A7763]" />} title="Notificações" subtitle="Receba alertas e novidades" right={<ToggleSwitch checked={notificationsEnabled} onChange={setNotificationsEnabled} />} />
+          <SettingsRow icon={<Moon size={16} strokeWidth={1.5} className="text-[#8A7763]" />} title="Tema" subtitle="Escolha entre claro ou escuro" right={<ToggleSwitch checked={themeMode === 'dark'} onChange={(v) => setThemeMode(v ? 'dark' : 'light')} />} />
+          <SettingsRow icon={<Languages size={16} strokeWidth={1.5} className="text-[#8A7763]" />} title="Idioma" subtitle={language} onClick={() => setLanguage('Português (Brasil)')} />
+          <SettingsRow icon={<Shield size={16} strokeWidth={1.5} className="text-[#8A7763]" />} title="Privacidade" subtitle="Gerencie sua privacidade e dados" onClick={() => setShowPrivacyModal(true)} />
+          <SettingsRow icon={<RotateCcw size={16} strokeWidth={1.5} className="text-[#8A7763]" />} title="Restaurar compras" subtitle="Recupere suas compras anteriores" onClick={handleRestorePurchases} />
+          <SettingsRow icon={<CircleHelp size={16} strokeWidth={1.5} className="text-[#8A7763]" />} title="Ajuda" subtitle="Dúvidas frequentes e suporte" onClick={openSupport} />
+          <SettingsRow icon={<Info size={16} strokeWidth={1.5} className="text-[#8A7763]" />} title="Sobre o app" subtitle={`Versão ${APP_VERSION}`} onClick={() => setShowAboutModal(true)} />
         </div>
       </section>
-      <section className="space-y-3">
-        <h3 className="text-4xl serif text-[#2E241B]">Suporte</h3>
+      <section className="space-y-2">
+        <h3 className="text-[1.45rem] serif text-[#2E241B] leading-none">Suporte</h3>
         <SupportCard onClick={openSupport} />
       </section>
       {restorePurchasesState === 'processingPayment' && <p className="text-sm text-[#6A5E52]">Restaurando compras...</p>}
@@ -1108,9 +1336,9 @@ const App: React.FC = () => {
 
   const renderHome = () => {
     const discoveries = [
-      { id: 'final', title: 'FINAL EXPLICADO', subtitle: 'Entenda o desfecho em profundidade', bg: 'linear-gradient(160deg,#553115 0%,#1d120a 70%)' },
-      { id: 'camadas', title: 'CAMADAS OCULTAS', subtitle: 'Descubra símbolos e seus significados', bg: 'linear-gradient(160deg,#5a3819 0%,#1a1209 75%)' },
-      { id: 'mensagem', title: 'MENSAGEM CENTRAL', subtitle: 'A ideia principal da obra', bg: 'linear-gradient(160deg,#6f461c 0%,#1a1209 75%)' },
+      { id: 'final', title: 'FINAL EXPLICADO', image: HOME_DISCOVERY_FINAL_URL },
+      { id: 'camadas', title: 'CAMADAS OCULTAS', image: HOME_DISCOVERY_CAMADAS_URL },
+      { id: 'mensagem', title: 'MENSAGEM CENTRAL', image: HOME_DISCOVERY_MENSAGEM_URL },
     ];
 
     const progress = Math.min(100, Math.round(((recentMovies.length + recentSeries.length + recentBooks.length + recentTracks.length) / 12) * 100));
@@ -1133,13 +1361,13 @@ const App: React.FC = () => {
           <h3 className="text-[1.5rem] serif text-[#2E241B] leading-none">Acesso Rápido</h3>
           <div className="grid grid-cols-3 grid-rows-2 gap-2.5 flex-1 min-h-0">
             {[
-              ['Filmes e Séries', '🎬', 'movies_series'],
-              ['Livros', '📖', 'books'],
-              ['Músicas', '🎵', 'music'],
-              ['Favoritos', '♡', 'home'],
-              ['Tendências', '↗', 'home'],
-              ['Loja', '👜', 'store'],
-            ].map(([title, icon, tab]) => (
+              { title: 'Filmes e Séries', icon: Film, tab: 'movies_series' },
+              { title: 'Livros', icon: BookOpen, tab: 'books' },
+              { title: 'Músicas', icon: Music2, tab: 'music' },
+              { title: 'Favoritos', icon: Heart, tab: 'home' },
+              { title: 'Tendências', icon: TrendingUp, tab: 'home' },
+              { title: 'Loja', icon: ShoppingBag, tab: 'store' },
+            ].map(({ title, icon: Icon, tab }) => (
               <button
                 key={title}
                 onClick={() => {
@@ -1147,10 +1375,12 @@ const App: React.FC = () => {
                   else if (tab === 'home' && title === 'Tendências') setToast('Abrindo tendências...');
                   else setActiveTab(tab as AppTab);
                 }}
-                className="h-full rounded-[1rem] bg-[#F7F4EF] border border-[#E3DCD1] shadow-[0_8px_18px_rgba(0,0,0,0.08)] p-2 flex flex-col items-center justify-center gap-1.5"
+                className="h-full rounded-[1rem] bg-white border border-[#E6DED2] shadow-[0_4px_10px_rgba(0,0,0,0.06)] p-2 flex flex-col items-center justify-center gap-1.5"
               >
-                <span className="w-9 h-9 rounded-full bg-[#EFE9E0] flex items-center justify-center text-base text-[#8A6A3A]">{icon}</span>
-                <span className="text-[0.68rem] leading-tight text-center serif text-[#34271D]">{title}</span>
+                <span className="w-9 h-9 rounded-full bg-[#F4EFE6] flex items-center justify-center text-[#8A6A3A]">
+                  <Icon size={17} strokeWidth={1.5} />
+                </span>
+                <span className="text-[0.62rem] leading-tight text-center serif text-[#4A3A2B]">{title}</span>
               </button>
             ))}
           </div>
@@ -1163,13 +1393,9 @@ const App: React.FC = () => {
               <button
                 key={card.id}
                 onClick={() => setToast(`Sugestão "${card.title}" aplicada.`)}
-                className="relative h-full rounded-[1rem] overflow-hidden border border-[#6A4A24]/50 shadow-lg text-left"
-                style={{ backgroundImage: card.bg }}
+                className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden shadow-sm text-left"
               >
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/35 to-black/80" />
-                <div className="absolute left-2 right-2 bottom-1.5">
-                  <p className="text-white text-[0.6rem] leading-tight serif font-semibold">{card.title}</p>
-                </div>
+                <img src={card.image} alt={card.title} className="absolute inset-0 w-full h-full object-cover" />
               </button>
             ))}
           </div>
@@ -1180,26 +1406,23 @@ const App: React.FC = () => {
     );
   };
 
-  const renderPlaceholder = (title: string, subtitle: string) => (
-    <div className="rounded-[2rem] bg-[#F2EEE8] border border-[#DED7CB] shadow-[0_16px_40px_rgba(0,0,0,0.14)] p-6 text-center">
-      <h3 className="text-4xl serif text-[#2A2119]">{title}</h3>
-      <p className="text-[#6F6358] mt-2">{subtitle}</p>
-    </div>
-  );
-
-  const isHomeScreen = activeTab === 'home';
   const shouldLockScroll =
-    isHomeScreen ||
+    activeTab === 'home' ||
+    activeTab === 'store' ||
+    activeTab === 'settings' ||
     (activeTab === 'movies_series' && !moviesResult) ||
     (activeTab === 'books' && !booksResult) ||
-    (activeTab === 'music' && !musicResult);
+    (activeTab === 'movies_series' && !!moviesResult) ||
+    (activeTab === 'books' && !!booksResult) ||
+    activeTab === 'music';
 
   return (
-    <div className={`min-h-screen ${themeMode === 'dark' ? 'bg-[#1d1915] text-[#F3EBDD]' : 'bg-[#EDE7DF] text-[#2B231C]'} p-0 flex items-start justify-center`}>
-      <div className={`relative overflow-x-hidden bg-[#EDE7DF] w-full max-w-[430px] h-[100dvh] mobile-shell ${shouldLockScroll ? 'overflow-y-hidden' : 'overflow-y-auto'}`}>
+    <div className={`min-h-screen ${themeMode === 'dark' ? 'theme-dark bg-[#1d1915] text-[#F3EBDD]' : 'bg-[#EDE7DF] text-[#2B231C]'} p-2.5 flex items-start justify-center`}>
+      <div className="relative w-full max-w-[446px] rounded-[2rem] bg-gradient-to-b from-[#121212] to-[#060606] p-2 shadow-[0_22px_46px_rgba(0,0,0,0.45)] border border-white/10">
+      <div className={`relative overflow-x-hidden rounded-[1.6rem] ${themeMode === 'dark' ? 'bg-[#221d18]' : 'bg-[#EDE7DF]'} w-full h-[calc(100dvh-20px)] mobile-shell ${shouldLockScroll ? 'overflow-y-hidden' : 'overflow-y-auto'}`}>
         <main
-          className={`w-full px-4 pt-4 ${shouldLockScroll ? 'overflow-hidden' : ''}`}
-          style={shouldLockScroll ? { height: `calc(100dvh - ${BOTTOM_NAV_HEIGHT}px)`, paddingBottom: '8px' } : { paddingBottom: `${BOTTOM_NAV_HEIGHT + 12}px` }}
+          className={`w-full px-4 ${shouldLockScroll ? 'pt-2 overflow-hidden' : 'pt-4'}`}
+          style={shouldLockScroll ? { height: `calc(100% - ${BOTTOM_NAV_HEIGHT}px)`, paddingBottom: '6px' } : { paddingBottom: `${BOTTOM_NAV_HEIGHT + 12}px` }}
         >
           {activeTab === 'home' && renderHome()}
           {activeTab === 'music' && renderMusic()}
@@ -1209,6 +1432,7 @@ const App: React.FC = () => {
           {activeTab === 'books' && renderBooks()}
         </main>
         <BottomNav activeTab={activeTab} onChange={setActiveTab} />
+      </div>
       </div>
 
       {showLoginModal && (
@@ -1274,21 +1498,31 @@ const App: React.FC = () => {
           align-items: center;
           justify-content: center;
           gap: 4px;
-          color: #887a6a;
+          color: #958676;
           transition: all .2s ease;
           position: relative;
         }
-        .nav-tab.active { color: #8d621f; }
+        .nav-tab.active { color: #a87425; }
         .nav-tab.active::after {
           content: '';
           position: absolute;
           width: 46px;
-          height: 3px;
+          height: 2px;
           border-radius: 999px;
           background: #c99022;
           bottom: 2px;
         }
-        .tab-label { font-size: 9px; font-weight: 800; letter-spacing: .04em; }
+        .tab-icon-wrapper {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .tab-label {
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: .04em;
+          line-height: 1;
+        }
         @media (max-width: 420px) {
           .tab-label { font-size: 10px; }
         }

@@ -1,7 +1,7 @@
 {
-  "name": "Cine-Insight",
-  "short_name": "Cine-Insight",
-  "description": "Análise cinematográfica profunda com IA interpretativa.",
+  "name": "Decifra",
+  "short_name": "Decifra",
+  "description": "Filmes, séries, músicas e livros com interpretação inteligente.",
   "start_url": "./index.html",
   "display": "standalone",
   "display_override": [
@@ -18,13 +18,13 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0420780722.firebasestorage.app/o/1.1-APPs-Pr%C3%B3prios%2F1-Imagens%2F1-Decrifa%2F1-Logo.webp?alt=media&token=0455b19d-23a9-4ada-a7a2-fb67a3e12c9a",
+      "src": "/logo.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://firebasestorage.googleapis.com/v0/b/gen-lang-client-0420780722.firebasestorage.app/o/1.1-APPs-Pr%C3%B3prios%2F1-Imagens%2F1-Decrifa%2F1-Logo.webp?alt=media&token=0455b19d-23a9-4ada-a7a2-fb67a3e12c9a",
+      "src": "/logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable any"
