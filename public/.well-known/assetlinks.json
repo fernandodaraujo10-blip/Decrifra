@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.decifra.app",
+    "sha256_cert_fingerprints": [
+      "66:87:41:18:E8:0D:0D:50:A0:1E:61:37:79:89:D0:E8:9E:70:73:93:AD:14:E6:53:CD:D0:4B:FA:DB:7C:CD:BC"
+    ]
+  }
+}]

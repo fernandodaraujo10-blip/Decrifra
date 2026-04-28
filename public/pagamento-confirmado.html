@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pagamento Confirmado — Decifra</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #050505;
+      color: #f0e6d3;
+      font-family: system-ui, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .card {
+      max-width: 400px;
+      background: #0a0a0a;
+      border: 1px solid #1e1a14;
+      padding: 40px;
+      border-radius: 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    }
+
+    .icon {
+      width: 64px;
+      height: 64px;
+      background: #D5A54A;
+      color: #050505;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin: 0 auto 24px;
+    }
+
+    h1 {
+      color: #D5A54A;
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    p {
+      color: #a09080;
+      font-size: 1rem;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .btn {
+      display: inline-block;
+      background: #D5A54A;
+      color: #050505;
+      font-weight: 700;
+      text-decoration: none;
+      padding: 14px 28px;
+      border-radius: 12px;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+      transform: translateY(-2px);
+    }
+
+    .countdown {
+      margin-top: 24px;
+      font-size: 13px;
+      color: #504030;
+    }
+  </style>
+  <script>
+    // Redireciona automaticamente após 5 segundos
+    setTimeout(() => {
+      window.location.href = "https://decifra.app";
+    }, 5000);
+  </script>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">✓</div>
+    <h1>Pagamento Confirmado!</h1>
+    <p>Seu plano Premium já está ativo. Prepare-se para decifrar os mistérios por trás de cada obra.</p>
+    <a href="https://decifra.app" class="btn">Acessar o Decifra</a>
+    <div class="countdown">Redirecionando em alguns segundos...</div>
+  </div>
+</body>
+</html>

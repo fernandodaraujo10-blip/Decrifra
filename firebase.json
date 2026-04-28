@@ -1,9 +1,19 @@
 {
+    "functions": {
+        "source": "functions",
+        "codebase": "default",
+        "ignore": [
+            "node_modules",
+            ".git",
+            "firebase-debug.log",
+            "firebase-debug.*.log",
+            "*.local"
+        ]
+    },
     "hosting": {
         "public": "dist",
         "ignore": [
             "firebase.json",
-            "**/.*",
             "**/node_modules/**"
         ],
         "rewrites": [
@@ -14,12 +24,30 @@
         ],
         "headers": [
             {
+                "source": "/.well-known/assetlinks.json",
+                "headers": [
+                    { "key": "Content-Type",                "value": "application/json" },
+                    { "key": "Access-Control-Allow-Origin", "value": "*" },
+                    { "key": "Cache-Control",               "value": "no-cache, no-store, must-revalidate" }
+                ]
+            },
+            {
+                "source": "/sw.js",
+                "headers": [
+                    { "key": "Cache-Control",          "value": "no-cache, no-store, must-revalidate" },
+                    { "key": "Service-Worker-Allowed",  "value": "/" }
+                ]
+            },
+            {
+                "source": "/logo.png",
+                "headers": [
+                    { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+                ]
+            },
+            {
                 "source": "/version.json",
                 "headers": [
-                    {
-                        "key": "Cache-Control",
-                        "value": "no-cache, no-store, must-revalidate"
-                    }
+                    { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
                 ]
             }
         ]

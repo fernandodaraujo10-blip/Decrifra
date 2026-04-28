@@ -1,0 +1,28 @@
+{
+  "name": "Decifra",
+  "short_name": "Decifra",
+  "description": "Filmes, séries, músicas e livros com interpretação inteligente.",
+  "start_url": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "categories": ["entertainment", "education"],
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/logo.png", "sizes": "72x72",   "type": "image/png", "purpose": "any" },
+    { "src": "/logo.png", "sizes": "96x96",   "type": "image/png", "purpose": "any" },
+    { "src": "/logo.png", "sizes": "128x128", "type": "image/png", "purpose": "any" },
+    { "src": "/logo.png", "sizes": "144x144", "type": "image/png", "purpose": "any" },
+    { "src": "/logo.png", "sizes": "152x152", "type": "image/png", "purpose": "any" },
+    { "src": "/logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/logo.png", "sizes": "384x384", "type": "image/png", "purpose": "any" },
+    { "src": "/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable any" }
+  ],
+  "screenshots": [
+    { "src": "/screenshot-mobile.png",   "sizes": "1080x2337", "type": "image/png", "form_factor": "narrow", "label": "Home" },
+    { "src": "/screenshot-mobile-2.png", "sizes": "1080x2337", "type": "image/png", "form_factor": "narrow", "label": "Filmes e Séries" },
+    { "src": "/screenshot-mobile-3.png", "sizes": "1080x2337", "type": "image/png", "form_factor": "narrow", "label": "Planos Premium" },
+    { "src": "/screenshot-mobile-4.png", "sizes": "1080x2337", "type": "image/png", "form_factor": "narrow", "label": "Músicas" }
+  ]
+}
